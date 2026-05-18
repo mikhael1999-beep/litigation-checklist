@@ -8,89 +8,477 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --ink: #1C1917; --ink-2: #44403C; --ink-3: #78716C; --ink-4: #A8A29E;
-  --paper: #FAFAF9; --paper-2: #F5F4F0; --paper-3: #E7E5E4;
-  --gold: #B45309; --green: #166534; --red: #991B1B; --blue: #1E3A5F;
-  --border: #E7E5E4; --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --ink: #1C1917;
+  --ink-2: #44403C;
+  --ink-3: #78716C;
+  --ink-4: #A8A29E;
+  --paper: #FAFAF9;
+  --paper-2: #F5F4F0;
+  --paper-3: #E7E5E4;
+  --gold: #B45309;
+  --green: #166534;
+  --red: #991B1B;
+  --blue: #1E3A5F;
+  --border: #E7E5E4;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
 }
-body { font-family: 'DM Sans', sans-serif; background: var(--paper-2); color: var(--ink); min-height: 100vh; }
-/* (All your original styles remain exactly the same — only added a few below) */
-.followup-14 { background: #FEE2E2; border: 2px solid #991B1B; }
-.days-counter { font-size: 13px; font-weight: 600; color: #991B1B; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper-2);
+  color: var(--ink);
+  min-height: 100vh;
+}
+/* LAYOUT */
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  overflow-y: auto;
+  z-index: 100;
+}
+.main { margin-left: 280px; flex: 1; min-height: 100vh; }
+/* SIDEBAR */
+.sidebar-header {
+  padding: 2rem 1.5rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.firm-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 15px;
+  color: var(--paper);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+.system-name {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sidebar-section {
+  padding: 1rem 1.5rem 0.5rem;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 1.5rem;
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+.sidebar-btn:hover { color: var(--paper); background: rgba(255,255,255,0.05); }
+.sidebar-btn.active { color: var(--paper); background: rgba(255,255,255,0.08); border-left-color: var(--gold); }
+.matter-item {
+  padding: 10px 1.5rem;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+}
+.matter-item:hover { background: rgba(255,255,255,0.05); }
+.matter-item.active { background: rgba(255,255,255,0.08); border-left-color: var(--gold); }
+.matter-title { font-size: 12px; font-weight: 500; color: var(--paper); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.matter-meta { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+.matter-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
+.badge-unopposed { background: rgba(22,101,52,0.3); color: #86EFAC; }
+.badge-opposed { background: rgba(30,58,95,0.3); color: #93C5FD; }
+.badge-default { background: rgba(146,64,14,0.3); color: #FCD34D; }
+.badge-phase1 { background: rgba(180,83,9,0.2); color: #FCD34D; }
+.badge-phase2 { background: rgba(22,101,52,0.2); color: #86EFAC; }
+.new-matter-btn {
+  margin: 1rem 1.5rem;
+  padding: 10px;
+  background: var(--gold);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  width: calc(100% - 3rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+.new-matter-btn:hover { opacity: 0.88; }
+.sidebar-footer {
+  margin-top: auto;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+}
+/* TOPBAR */
+.topbar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.page-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--ink); }
+.page-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; font-size: 13px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--paper);
+  color: var(--ink); cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-weight: 500;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--paper-2); }
+.btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn-primary:hover { opacity: 0.88; }
+.btn-gold { background: var(--gold); color: white; border-color: var(--gold); }
+.btn-gold:hover { opacity: 0.88; }
+/* CONTENT */
+.content { padding: 2rem; }
+/* MATTER HEADER */
+.matter-header {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+.matter-header-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.matter-type-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px;
+}
+.matter-case-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px; color: var(--ink); margin-bottom: 4px;
+}
+.matter-ref { font-size: 13px; color: var(--ink-3); }
+/* FOLLOW-UP ALERT */
+.followup-14 {
+  background: #FEE2E2;
+  border: 2px solid #991B1B;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.followup-icon { font-size: 22px; flex-shrink: 0; }
+.followup-text { font-size: 13px; color: var(--red); line-height: 1.5; flex: 1; }
+.days-counter { font-weight: 600; font-size: 15px; }
+/* CHECKLIST */
+.checklist-card {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.25rem;
+}
+.checklist-card-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.checklist-card-title {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  display: flex; align-items: center; gap: 8px;
+}
+.checklist-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.checklist-item:last-child { border-bottom: none; }
+.check-box {
+  width: 18px; height: 18px; border-radius: 4px;
+  border: 1.5px solid var(--border); background: var(--paper);
+  flex-shrink: 0; margin-top: 1px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.check-box.checked { background: var(--green); border-color: var(--green); }
+.item-label { font-size: 13px; color: var(--ink); line-height: 1.5; }
+.item-label.done { text-decoration: line-through; color: var(--ink-3); }
+/* DATE INPUT ROW */
+.date-input-row {
+  background: var(--amber-light, #FEF3C7);
+  border: 1px solid #FDE68A;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.date-input-label { font-size: 13px; font-weight: 500; color: #92400E; flex-shrink: 0; }
+.date-input {
+  padding: 7px 10px; border-radius: 6px;
+  border: 1px solid #FDE68A; background: white;
+  font-size: 13px; font-family: 'DM Sans', sans-serif;
+  color: var(--ink); outline: none;
+}
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: var(--paper);
+  border-radius: 12px;
+  width: 100%; max-width: 520px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--ink); }
+.modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+.form-input, .form-select {
+  padding: 9px 12px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--paper);
+  font-size: 13px; font-family: 'DM Sans', sans-serif;
+  color: var(--ink); outline: none;
+}
+.success-toast {
+  position: fixed; bottom: 2rem; right: 2rem;
+  background: var(--ink); color: var(--paper);
+  padding: 12px 20px; border-radius: 8px;
+  font-size: 13px; z-index: 300;
+  transform: translateY(100px); opacity: 0;
+  transition: all 0.3s ease;
+}
+.success-toast.show { transform: translateY(0); opacity: 1; }
 </style>
 </head>
 <body>
 <div class="app">
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <div class="firm-name">Albert Hibbert Attorneys Inc.</div>
-      <div class="system-name">Litigation Checklist</div>
-    </div>
-    <button class="new-matter-btn" onclick="openNewMatter()">+ New matter</button>
-    
-    <div class="sidebar-section">Dashboard</div>
-    <button class="sidebar-btn active" onclick="showDashboard()">⊞ Overview</button>
-    
-    <div class="sidebar-section">Active matters</div>
-    <div id="matter-list"></div>
-
-    <div class="sidebar-footer" style="margin-top: auto; padding: 1rem 1.5rem;">
-      <button class="btn btn-sm" onclick="exportData()" style="width:100%;margin-bottom:8px;">📤 Export Backup</button>
-      <button class="btn btn-sm" onclick="document.getElementById('import-file').click()" style="width:100%;">📥 Import Backup</button>
-      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
-      Gauteng Division · Directive 1/2024
-    </div>
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="firm-name">Albert Hibbert Attorneys Inc.</div>
+    <div class="system-name">Litigation Checklist</div>
   </div>
-
-  <!-- MAIN -->
-  <div class="main">
-    <div class="topbar">
-      <div>
-        <div class="page-title" id="page-title">Dashboard</div>
-        <div class="page-sub" id="page-sub">Litigation matter tracking</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-primary" onclick="openNewMatter()">+ New matter</button>
-      </div>
-    </div>
-    <div class="content" id="main-content"></div>
+  <button class="new-matter-btn" onclick="openNewMatter()">
+    + New matter
+  </button>
+  <div class="sidebar-section">Dashboard</div>
+  <button class="sidebar-btn active" onclick="showDashboard()">
+    ⊞ &nbsp;Overview
+  </button>
+  <div class="sidebar-section">Active matters</div>
+  <div id="matter-list"></div>
+  <div class="sidebar-footer">
+    Gauteng Division · Directive 1/2024
   </div>
 </div>
-
-<!-- NEW MATTER MODAL + EDIT MODAL (reused) -->
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="page-sub" id="page-sub">Litigation matter tracking</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-primary" onclick="openNewMatter()">+ New matter</button>
+    </div>
+  </div>
+  <div class="content" id="main-content"></div>
+</div>
+</div>
+<!-- NEW MATTER MODAL -->
 <div class="modal-overlay hidden" id="modal-overlay">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="modal-title">New matter</div>
+      <div class="modal-title">New matter</div>
       <button class="btn btn-sm" onclick="closeModal()">✕</button>
     </div>
-    <div class="modal-body" id="modal-body">
-      <!-- Filled by JS -->
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="form-label">Matter / Case name *</label>
+        <input class="form-input" id="m-name" placeholder="e.g. Smith v Jones (Pty) Ltd" />
+      </div>
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-field">
+          <label class="form-label">Case number *</label>
+          <input class="form-input" id="m-case" placeholder="e.g. 12345/2024" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Matter type *</label>
+          <select class="form-select" id="m-type">
+            <option value="unopposed">Unopposed Motion</option>
+            <option value="opposed">Opposed Motion</option>
+            <option value="default">Default Judgment</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-field">
+          <label class="form-label">Responsible person</label>
+          <select class="form-select" id="m-attorney">
+            <option value="aha3@hibbertlaw.co.za">Mikhael Venter</option>
+            <option value="jaco@hibbertlaw.co.za">Jaco du Plooy</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Ghost reference</label>
+          <input class="form-input" id="m-ghost" placeholder="e.g. AH/2026/045" />
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Date application submitted</label>
+        <input class="form-input" type="date" id="m-date-applied" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createMatter()">Create matter</button>
     </div>
   </div>
 </div>
-
 <!-- TOAST -->
 <div class="success-toast" id="toast"></div>
 
 <script>
-// ====================== DATA & CHECKLISTS ======================
-const CHECKLISTS = { /* Your original CHECKLISTS object — unchanged */ 
-  unopposed: { /* ... same as before ... */ },
-  opposed: { /* ... same as before ... */ },
-  default: { /* ... same as before ... */ }
+// ============================================================
+// DATA
+// ============================================================
+const CHECKLISTS = {
+  unopposed: {
+    phase1: {
+      title: "Date Application",
+      items: [
+        { id: "u1_1", label: "Blank notice of set down prepared", note: "" },
+        { id: "u1_2", label: "Directive compliance certificate prepared", note: "" },
+        { id: "u1_3", label: "Return of sheriff filed", note: "" },
+        { id: "u1_4", label: "Date application form completed and submitted to CourtOnline", note: "Record the date applied below once submitted" },
+      ]
+    },
+    phase2: {
+      title: "Final Enrolment",
+      items: [
+        { id: "u2_1", label: "Compliance statement prepared and uploaded", note: "" },
+        { id: "u2_2", label: "Documents moved from CourtOnline to CaseLines", note: "" },
+        { id: "u2_3", label: "CaseLines sections made compliant", note: "" },
+        { id: "u2_4", label: "Notice of final enrolment prepared with proof of service", note: "" },
+        { id: "u2_5", label: "Compliant practice note uploaded to CaseLines", note: "Deadline: 5 court days before set down week" },
+        { id: "u2_6", label: "Updated practice note with Judge name and court number uploaded", note: "" },
+        { id: "u2_7", label: "Draft order of court uploaded", note: "" },
+        { id: "u2_8", label: "Short heads of argument filed (if applicable)", note: "Optional — if directed" },
+      ]
+    }
+  },
+  opposed: {
+    phase1: {
+      title: "Date Application",
+      items: [
+        { id: "o1_1", label: "Applicant heads of argument filed", note: "Within 15 days of replying affidavit" },
+        { id: "o1_2", label: "Respondent heads of argument filed", note: "Within 10 days of applicant heads" },
+        { id: "o1_3", label: "List of authorities prepared", note: "" },
+        { id: "o1_4", label: "Chronology table prepared", note: "" },
+        { id: "o1_5", label: "Blank notice of set down prepared", note: "" },
+        { id: "o1_6", label: "Practice note prepared", note: "" },
+        { id: "o1_7", label: "Directive compliance certificate prepared", note: "" },
+        { id: "o1_8", label: "Date application submitted to CourtOnline", note: "Record the date applied below once submitted" },
+      ]
+    },
+    phase2: {
+      title: "Final Enrolment",
+      items: [
+        { id: "o2_1", label: "Documents moved from CourtOnline to CaseLines", note: "" },
+        { id: "o2_2", label: "CaseLines sections made compliant", note: "" },
+        { id: "o2_3", label: "Joint practice note prepared OR unilateral practice note prepared", note: "" },
+        { id: "o2_4", label: "Joint/unilateral practice note uploaded to CaseLines", note: "" },
+        { id: "o2_5", label: "Practice note emailed to senior Judge", note: "Deadline: 12 court days before set down week" },
+        { id: "o2_6", label: "Draft order uploaded", note: "" },
+      ]
+    }
+  },
+  default: {
+    phase1: {
+      title: "Date Application",
+      items: [
+        { id: "d1_1", label: "Return of sheriff filed", note: "" },
+        { id: "d1_2", label: "Application for default judgment prepared (Rule 31(5))", note: "" },
+        { id: "d1_3", label: "Draft order prepared", note: "" },
+        { id: "d1_4", label: "Compliance statement prepared", note: "" },
+        { id: "d1_5", label: "Documents uploaded to CourtOnline in separate sections", note: "" },
+        { id: "d1_6", label: "Date application submitted to CourtOnline", note: "Record the date applied below once submitted" },
+      ]
+    },
+    phase2: {
+      title: "Registrar Decision",
+      items: [
+        { id: "d2_1", label: "Documents moved from CourtOnline to CaseLines", note: "" },
+        { id: "d2_2", label: "CaseLines sections made compliant", note: "" },
+        { id: "d2_3", label: "Application reviewed — registrar decides", note: "" },
+        { id: "d2_4", label: "Draft order confirmed and uploaded", note: "" },
+        { id: "d2_5", label: "Compliance statement confirmed", note: "" },
+      ]
+    }
+  }
 };
-const TYPE_LABELS = { unopposed: "Unopposed Motion", opposed: "Opposed Motion", default: "Default Judgment" };
+const TYPE_LABELS = {
+  unopposed: "Unopposed Motion",
+  opposed: "Opposed Motion",
+  default: "Default Judgment"
+};
 
-// ====================== STATE ======================
+// ============================================================
+// STATE
+// ============================================================
 let matters = JSON.parse(localStorage.getItem('aha_matters') || '[]');
 let currentMatterId = null;
 let currentPhase = 1;
 
-// ====================== HELPER FUNCTIONS ======================
-function save() { localStorage.setItem('aha_matters', JSON.stringify(matters)); }
+function save() {
+  localStorage.setItem('aha_matters', JSON.stringify(matters));
+}
 
+// ============================================================
+// DATE HELPERS
+// ============================================================
 function calendarDaysSince(dateStr) {
   if (!dateStr) return 0;
   const then = new Date(dateStr);
@@ -100,148 +488,232 @@ function calendarDaysSince(dateStr) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-// ====================== EXPORT / IMPORT ======================
-function exportData() {
-  const dataStr = JSON.stringify(matters, null, 2);
-  const blob = new Blob([dataStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `litigation-backup-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  toast('Backup exported successfully');
-}
-
-function importData(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    try {
-      matters = JSON.parse(ev.target.result);
-      save();
-      renderSidebar();
-      renderDashboard();
-      toast('Backup imported successfully');
-    } catch(err) { alert('Invalid backup file'); }
-  };
-  reader.readAsText(file);
-}
-
-// ====================== MATTER CRUD ======================
-function openNewMatter() { /* same as before */ }
-function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
-
-function createMatter() { /* your original createMatter — unchanged */ }
-
-function editMatter(id) {
-  const m = matters.find(x => x.id === id);
-  if (!m) return;
-  // Populate modal with edit form (you can expand this later if needed)
-  document.getElementById('modal-title').textContent = 'Edit Matter';
-  document.getElementById('modal-body').innerHTML = `
-    <div class="form-field"><label class="form-label">Matter name</label><input class="form-input" id="edit-name" value="${m.name}"></div>
-    <div class="form-field"><label class="form-label">Case number</label><input class="form-input" id="edit-case" value="${m.caseNo}"></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEdit('${id}')">Save Changes</button>
-    </div>`;
-  document.getElementById('modal-overlay').classList.remove('hidden');
-}
-
-function saveEdit(id) {
-  const m = matters.find(x => x.id === id);
-  if (m) {
-    m.name = document.getElementById('edit-name').value.trim();
-    m.caseNo = document.getElementById('edit-case').value.trim();
-    save();
-    closeModal();
-    renderSidebar();
-    if (currentMatterId === id) renderMatter(m);
-    toast('Matter updated');
-  }
-}
-
-function deleteMatter(id) {
-  if (!confirm('Delete this matter permanently?')) return;
-  matters = matters.filter(m => m.id !== id);
-  save();
-  renderSidebar();
-  if (currentMatterId === id) showDashboard();
-  else renderMatter(matters[0]);
-  toast('Matter deleted');
-}
-
-// ====================== FOLLOW-UP EMAIL (14 days) ======================
+// ============================================================
+// 14-DAY FOLLOW-UP FEATURE
+// ============================================================
 function sendFollowUpEmail(matterId) {
   const m = matters.find(x => x.id === matterId);
   if (!m || !m.dateApplied) return;
-
   const days = calendarDaysSince(m.dateApplied);
-  const subject = encodeURIComponent(`FOLLOW-UP: Date application — ${m.name} (${m.caseNo})`);
-  const body = encodeURIComponent(`Dear Registrar\n\nWe kindly request an update on the date application submitted on ${formatDate(m.dateApplied)} for the above matter (${days} days ago).\n\nKind regards,\nAlbert Hibbert Attorneys Inc.`);
-
-  const url = `https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`;
-  window.open(url, '_blank');
-  toast('Outlook email opened — follow-up ready');
+  const subject = encodeURIComponent(`FOLLOW-UP: Date application — ${m.name} (${m.caseNo}) — ${days} days`);
+  const body = encodeURIComponent(`Dear Registrar\n\nWe kindly request an update on the date application submitted on ${formatDate(m.dateApplied)} (${days} calendar days ago) for the above matter.\n\nPlease advise when we may expect allocation.\n\nThank you,\nAlbert Hibbert Attorneys Inc.`);
+  window.open(`https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`, '_blank');
+  toast('✅ Outlook follow-up email opened');
 }
 
-// ====================== RENDER FUNCTIONS ======================
-function renderSidebar() { /* your original — unchanged */ }
+// ============================================================
+// MATTER MANAGEMENT
+// ============================================================
+function openNewMatter() {
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  document.getElementById('m-name').focus();
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+function createMatter() {
+  const name = document.getElementById('m-name').value.trim();
+  const caseNo = document.getElementById('m-case').value.trim();
+  const type = document.getElementById('m-type').value;
+  const atty = document.getElementById('m-attorney').value;
+  const ghost = document.getElementById('m-ghost').value.trim();
+  const applied = document.getElementById('m-date-applied').value;
+
+  if (!name || !caseNo) { alert('Please enter the matter name and case number.'); return; }
+
+  const id = Date.now().toString();
+  const checklist = CHECKLISTS[type];
+  const checked = {};
+  [...checklist.phase1.items, ...(checklist.phase2?.items || [])].forEach(i => checked[i.id] = false);
+
+  const matter = {
+    id, name, caseNo, type, atty, ghost,
+    dateApplied: applied || null,
+    dateAllocated: null,
+    created: new Date().toISOString(),
+    checked
+  };
+  matters.unshift(matter);
+  save();
+  closeModal();
+  renderSidebar();
+  openMatter(id);
+  toast('Matter created — ' + name);
+}
+function openMatter(id) {
+  currentMatterId = id;
+  currentPhase = 1;
+  document.querySelectorAll('.matter-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+  const m = matters.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('page-title').textContent = m.name;
+  document.getElementById('page-sub').textContent = TYPE_LABELS[m.type] + ' · ' + m.caseNo;
+  renderMatter(m);
+}
+function toggleCheck(matterId, itemId) {
+  const m = matters.find(x => x.id === matterId);
+  if (!m) return;
+  m.checked[itemId] = !m.checked[itemId];
+  save();
+  renderMatter(m);
+}
+function setDateApplied(matterId, val) {
+  const m = matters.find(x => x.id === matterId);
+  if (!m) return;
+  m.dateApplied = val || null;
+  save();
+  renderMatter(m);
+}
+function setDateAllocated(matterId, val) {
+  const m = matters.find(x => x.id === matterId);
+  if (!m) return;
+  m.dateAllocated = val || null;
+  save();
+  renderMatter(m);
+  renderSidebar();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderSidebar() {
+  const list = document.getElementById('matter-list');
+  if (!matters.length) {
+    list.innerHTML = '<div style="padding:0.75rem 1.5rem;font-size:12px;color:rgba(255,255,255,0.25);">No matters yet</div>';
+    return;
+  }
+  list.innerHTML = matters.map(m => {
+    const phase = m.dateAllocated ? 2 : 1;
+    const cl = CHECKLISTS[m.type];
+    const items = phase === 1 ? cl.phase1.items : (cl.phase2?.items || []);
+    const done = items.filter(i => m.checked[i.id]).length;
+    const total = items.length;
+    return `<div class="matter-item ${currentMatterId === m.id ? 'active' : ''}" data-id="${m.id}" onclick="openMatter('${m.id}')">
+      <div class="matter-title">${m.name}</div>
+      <div class="matter-meta">${m.caseNo} · ${done}/${total} done</div>
+      <span class="matter-badge badge-${m.type}">${TYPE_LABELS[m.type]}</span>
+      <span class="matter-badge badge-phase${phase}">Phase ${phase}</span>
+    </div>`;
+  }).join('');
+}
 
 function showDashboard() {
   currentMatterId = null;
-  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.matter-item').forEach(el => el.classList.remove('active'));
   document.getElementById('page-title').textContent = 'Dashboard';
   document.getElementById('page-sub').textContent = 'Litigation matter tracking';
   renderDashboard();
 }
 
-function renderDashboard() { /* your original + small improvements */ }
+function renderDashboard() {
+  const content = document.getElementById('main-content');
+  content.innerHTML = `<div style="text-align:center;padding:4rem 2rem;color:#78716C;">
+    <h2 style="font-family:'DM Serif Display',serif;font-size:28px;">Welcome to Litigation Checklist</h2>
+    <p style="margin:1rem 0 2rem;">Create your first matter to begin tracking checklists and deadlines.</p>
+    <button class="btn btn-primary" onclick="openNewMatter()">+ Create first matter</button>
+  </div>`;
+}
 
 function renderMatter(m) {
-  const cl = CHECKLISTS[m.type];
-  const phase = m.dateAllocated ? 2 : 1;
-  currentPhase = Math.min(currentPhase, phase);
-
   const daysSinceApplied = m.dateApplied ? calendarDaysSince(m.dateApplied) : 0;
-  const needs14DayFollowUp = m.dateApplied && daysSinceApplied >= 14 && !m.dateAllocated;
+  const needsFollowUp = m.dateApplied && daysSinceApplied >= 14 && !m.dateAllocated;
 
-  // ... (rest of your original renderMatter code)
-
-  // NEW 14-DAY REMINDER
   let followupHtml = '';
-  if (needs14DayFollowUp) {
+  if (needsFollowUp) {
     followupHtml = `
-      <div class="followup-alert followup-14">
+      <div class="followup-14">
         <div class="followup-icon">⚠️</div>
         <div class="followup-text">
-          <div class="followup-title">14-DAY FOLLOW-UP REQUIRED</div>
-          <strong>${daysSinceApplied} calendar days</strong> since date application submitted.<br>
+          <div class="days-counter">📆 ${daysSinceApplied} calendar days since date applied</div>
+          <strong>14-day follow-up period has passed.</strong><br>
           Please follow up with the Registrar's office immediately.
-          <button class="btn btn-gold" style="margin-top:8px;width:100%;" onclick="sendFollowUpEmail('${m.id}')">
+          <button onclick="sendFollowUpEmail('${m.id}')" style="margin-top:12px;background:#991B1B;color:white;border:none;padding:10px 20px;border-radius:6px;width:100%;cursor:pointer;font-weight:600;">
             📧 Send follow-up email via Outlook
           </button>
         </div>
       </div>`;
   }
 
-  // Days counter in header
-  const daysHtml = m.dateApplied ? `<div class="days-counter">${daysSinceApplied} days since applied</div>` : '';
+  const phase = m.dateAllocated ? 2 : 1;
+  const cl = CHECKLISTS[m.type];
 
-  // Insert the new HTML into your existing renderMatter output
-  // (I kept the rest of your beautiful layout exactly the same, just added the above)
+  const p1items = cl.phase1.items;
+  const p1done = p1items.filter(i => m.checked[i.id]).length;
+  const p2items = cl.phase2?.items || [];
+  const p2done = p2items.filter(i => m.checked[i.id]).length;
 
-  // ... your full matter header + checklist + deadlines ...
+  const items = currentPhase === 1 ? p1items : p2items;
+  const checklistHtml = items.map(item => {
+    const done = m.checked[item.id];
+    return `<div class="checklist-item ${done ? 'completed' : ''}">
+      <div class="check-box ${done ? 'checked' : ''}" onclick="toggleCheck('${m.id}','${item.id}')">
+        ${done ? '<span style="color:white;font-size:11px;">✓</span>' : ''}
+      </div>
+      <div>
+        <div class="item-label ${done ? 'done' : ''}">${item.label}</div>
+        ${item.note ? `<div style="font-size:11px;color:#A8A29E;margin-top:3px;">${item.note}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const content = document.getElementById('main-content');
+  content.innerHTML = `
+    <div class="matter-header">
+      <div class="matter-header-top">
+        <div>
+          <div class="matter-type-label">${TYPE_LABELS[m.type]}</div>
+          <div class="matter-case-name">${m.name}</div>
+          <div class="matter-ref">${m.caseNo}${m.ghost ? ' · Ghost: ' + m.ghost : ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:var(--ink-3);">Phase ${phase} of 2</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem;">
+        <div><div style="font-size:11px;color:#A8A29E;">Date applied</div><div style="font-weight:500;">${m.dateApplied ? formatDate(m.dateApplied) : '—'}</div></div>
+        <div><div style="font-size:11px;color:#A8A29E;">Date allocated</div><div style="font-weight:500;">${m.dateAllocated ? formatDate(m.dateAllocated) : 'Pending'}</div></div>
+      </div>
+    </div>
+
+    ${followupHtml}
+
+    ${!m.dateApplied ? `
+    <div class="date-input-row">
+      <span class="date-input-label">📅 Record date application submitted:</span>
+      <input type="date" class="date-input" onchange="setDateApplied('${m.id}',this.value)" value="${m.dateApplied||''}" />
+    </div>` : ''}
+
+    ${m.dateApplied && !m.dateAllocated ? `
+    <div class="date-input-row">
+      <span class="date-input-label">🎯 Date allocated? Enter it here to move to Phase 2:</span>
+      <input type="date" class="date-input" onchange="setDateAllocated('${m.id}',this.value)" value="${m.dateAllocated||''}" />
+    </div>` : ''}
+
+    <div class="checklist-card">
+      <div class="checklist-card-header">
+        <div class="checklist-card-title">Phase ${currentPhase} — ${currentPhase===1 ? cl.phase1.title : (cl.phase2?.title || 'Final Enrolment')}</div>
+      </div>
+      ${checklistHtml}
+    </div>
+  `;
 }
 
-// ====================== INIT ======================
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
 renderSidebar();
-renderDashboard();
+showDashboard();
 </script>
 </body>
 </html>
