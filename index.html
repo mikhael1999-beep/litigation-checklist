@@ -324,23 +324,38 @@ function addAllToCalendar(matterId) {
 // ============================================================
 function updateStats() {
   const all = Object.values(matters);
-  document.getElementById('stat-total').textContent = all.length;
-  document.getElementById('stat-p1').textContent = all.filter(m => !m.dateAllocated).length;
-  document.getElementById('stat-p2').textContent = all.filter(m => m.dateAllocated).length;
-  const fu = all.filter(m => m.dateApplied && calendarDaysSince(m.dateApplied) > 20 && !m.dateAllocated).length;
+  const active = all.filter(m => m.status !== 'concluded');
+  document.getElementById('stat-total').textContent = active.length;
+  document.getElementById('stat-p1').textContent = active.filter(m => !m.dateAllocated).length;
+  document.getElementById('stat-p2').textContent = active.filter(m => m.dateAllocated).length;
+  const fu = active.filter(m => m.dateApplied && calendarDaysSince(m.dateApplied) > 20 && !m.dateAllocated).length;
   const el = document.getElementById('stat-fu');
   el.textContent = fu;
-  el.style.color = fu > 0 ? '#991B1B' : '#166534';
+  el.style.color = fu > 0 ? '#FCA5A5' : '#86EFAC';
 }
 
 function renderSidebar() {
   const list = document.getElementById('matter-list');
   const all = Object.values(matters).sort((a,b) => b.created > a.created ? 1 : -1);
+  const active = all.filter(m => m.status !== 'concluded');
+  const concluded = all.filter(m => m.status === 'concluded');
+
   if (!all.length) {
     list.innerHTML = '<div style="padding:0.75rem 1.5rem;font-size:12px;color:rgba(255,255,255,0.25);">No matters yet</div>';
     return;
   }
-  list.innerHTML = all.map(m => {
+
+  const matterHtml = (m, isConcluded) => {
+    if (isConcluded) {
+      return `<div class="matter-item" data-id="${m.id}" style="opacity:0.5;">
+        <div class="matter-title" style="text-decoration:line-through;">${m.name}</div>
+        <div class="matter-meta">${m.caseNo} · Concluded</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
+          <span class="matter-badge" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);">Concluded</span>
+          <button onclick="restoreMatter('${m.id}')" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:10px;cursor:pointer;padding:0;font-family:inherit;">Restore</button>
+        </div>
+      </div>`;
+    }
     const phase = m.dateAllocated ? 2 : 1;
     const cl = CHECKLISTS[m.type];
     const items = phase === 1 ? cl.phase1.items : cl.phase2.items;
@@ -355,7 +370,14 @@ function renderSidebar() {
         ${needsFollowup ? '<span class="matter-badge" style="background:rgba(153,27,27,0.3);color:#FCA5A5;">Follow-up</span>' : ''}
       </div>
     </div>`;
-  }).join('');
+  };
+
+  list.innerHTML = active.map(m => matterHtml(m, false)).join('') +
+    (concluded.length ? `
+      <div style="padding:0.75rem 1.5rem 0.25rem;font-size:10px;font-weight:600;color:rgba(255,255,255,0.2);letter-spacing:0.1em;text-transform:uppercase;margin-top:0.5rem;border-top:1px solid rgba(255,255,255,0.07);">
+        Concluded (${concluded.length})
+      </div>
+      ${concluded.map(m => matterHtml(m, true)).join('')}` : '');
 }
 
 function openMatter(id) {
@@ -378,7 +400,7 @@ function showDashboard() {
 }
 
 function renderDashboard() {
-  const all = Object.values(matters).sort((a,b) => b.created > a.created ? 1 : -1);
+  const all = Object.values(matters).sort((a,b) => b.created > a.created ? 1 : -1).filter(m => m.status !== 'concluded');
   const content = document.getElementById('main-content');
   content.innerHTML = !all.length ? `
     <div class="empty-state">
@@ -491,6 +513,11 @@ function renderMatter(m) {
         <div class="meta-item"><div class="meta-label">Phase 1</div><div class="meta-value">${p1done}/${p1items.length}</div></div>
         <div class="meta-item"><div class="meta-label">Phase 2</div><div class="meta-value">${p2done}/${p2items.length}</div></div>
       </div>
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+        <button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;" onclick="concludeMatter('${m.id}')">
+          ✓ Conclude matter
+        </button>
+      </div>
     </div>
 
     ${needsFollowup ? `
@@ -572,6 +599,37 @@ window.switchPhase    = switchPhase;
 window.addToCalendar  = addToCalendar;
 window.addAllToCalendar = addAllToCalendar;
 window.addFollowUpReminder = addFollowUpReminder;
+
+window.concludeMatter = async function(matterId) {
+  const m = matters[matterId];
+  if (!m) return;
+  const note = prompt('Add a conclusion note (optional):
+e.g. Order granted 18 May 2026');
+  if (note === null) return; // cancelled
+  try {
+    await updateDoc(doc(db, 'matters', matterId), {
+      status: 'concluded',
+      concludedDate: new Date().toISOString(),
+      conclusionNote: note || ''
+    });
+    currentMatterId = null;
+    document.getElementById('page-title').textContent = 'Dashboard';
+    document.getElementById('page-sub').textContent = 'Litigation matter tracking';
+    renderDashboard();
+    toast('Matter concluded and moved to archive');
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+window.restoreMatter = async function(matterId) {
+  try {
+    await updateDoc(doc(db, 'matters', matterId), {
+      status: 'active',
+      concludedDate: null,
+      conclusionNote: ''
+    });
+    toast('Matter restored to active');
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
 
 // Start
 startListening();
