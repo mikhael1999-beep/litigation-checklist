@@ -421,14 +421,95 @@ function showDashboard() {
 
 function renderDashboard() {
   const all = Object.values(matters).sort((a,b) => b.created > a.created ? 1 : -1).filter(m => m.status !== 'concluded');
-  const content = document.getElementById('main-content');
-  content.innerHTML = !all.length ? `
-    <div class="empty-state">
-      <div class="empty-icon">[Law]</div>
-      <div class="empty-title">No matters yet</div>
-      <div class="empty-sub">Create your first litigation matter to start tracking checklist progress and deadlines.</div>
-      <button class="btn btn-primary" onclick="openNewMatter()">+ Create first matter</button>
-    </div>` : `
+  const mainContent = document.getElementById('main-content');
+
+  if (!all.length) {
+    mainContent.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">[Law]</div>
+        <div class="empty-title">No matters yet</div>
+        <div class="empty-sub">Create your first litigation matter to start tracking checklist progress and deadlines.</div>
+        <button class="btn btn-primary" onclick="openNewMatter()">+ Create first matter</button>
+      </div>`;
+    return;
+  }
+
+  // Age analysis data
+  const awaitingDate = all.filter(m => m.dateApplied && !m.dateAllocated);
+  const withDate     = all.filter(m => m.dateAllocated);
+  const notApplied   = all.filter(m => !m.dateApplied && !m.dateAllocated);
+
+  // Bucket awaitingDate by days since applied
+  const bucket = (days) => {
+    if (days <= 7)  return { label: '0-7 days', color: '#166534', bg: '#DCFCE7', cls: 'ok' };
+    if (days <= 14) return { label: '8-14 days', color: '#92400E', bg: '#FEF3C7', cls: 'soon' };
+    if (days <= 20) return { label: '15-20 days', color: '#B45309', bg: '#FEF3C7', cls: 'soon' };
+    return { label: '21+ days (overdue)', color: '#991B1B', bg: '#FEE2E2', cls: 'urgent' };
+  };
+
+  const urgencyBucket = (courtDays) => {
+    if (courtDays === null) return { label: 'Past', color: '#78716C', bg: '#E7E5E4' };
+    if (courtDays <= 7)  return { label: courtDays + ' court days', color: '#991B1B', bg: '#FEE2E2' };
+    if (courtDays <= 20) return { label: courtDays + ' court days', color: '#92400E', bg: '#FEF3C7' };
+    return { label: courtDays + ' court days', color: '#166534', bg: '#DCFCE7' };
+  };
+
+  // Age analysis HTML
+  const ageAnalysisHtml = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+
+      <!-- Awaiting date allocation -->
+      <div class="checklist-card" style="margin-bottom:0;">
+        <div class="checklist-card-header">
+          <div class="checklist-card-title">Awaiting date allocation</div>
+          <span class="progress-pill">${awaitingDate.length} matter${awaitingDate.length!==1?'s':''}</span>
+        </div>
+        ${!awaitingDate.length ? '<div style="padding:1rem 1.5rem;font-size:13px;color:var(--ink-3);">None pending</div>' :
+          awaitingDate.sort((a,b) => calendarDaysSince(b.dateApplied) - calendarDaysSince(a.dateApplied)).map(m => {
+            const days = calendarDaysSince(m.dateApplied);
+            const b = bucket(days);
+            return `<div class="checklist-item" onclick="openMatter('${m.id}')" style="cursor:pointer;">
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;">${m.name}</div>
+                <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">${m.caseNo} . ${TYPE_LABELS[m.type]}</div>
+                <div style="font-size:11px;margin-top:4px;">Applied: ${formatDate(m.dateApplied)}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:13px;font-weight:600;color:${b.color};">${days} days</div>
+                <div style="font-size:10px;padding:2px 6px;border-radius:4px;background:${b.bg};color:${b.color};margin-top:3px;">${b.label}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        ${notApplied.length ? `<div style="padding:8px 1.5rem;font-size:12px;color:var(--ink-3);border-top:1px solid var(--border);">+ ${notApplied.length} matter${notApplied.length!==1?'s':''} not yet applied</div>` : ''}
+      </div>
+
+      <!-- Date allocated - upcoming hearings -->
+      <div class="checklist-card" style="margin-bottom:0;">
+        <div class="checklist-card-header">
+          <div class="checklist-card-title">Upcoming hearings</div>
+          <span class="progress-pill">${withDate.length} matter${withDate.length!==1?'s':''}</span>
+        </div>
+        ${!withDate.length ? '<div style="padding:1rem 1.5rem;font-size:13px;color:var(--ink-3);">No dates allocated yet</div>' :
+          withDate.sort((a,b) => new Date(a.dateAllocated) - new Date(b.dateAllocated)).map(m => {
+            const cd = courtDaysUntil(m.dateAllocated);
+            const b = urgencyBucket(cd);
+            return `<div class="checklist-item" onclick="openMatter('${m.id}')" style="cursor:pointer;">
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;">${m.name}</div>
+                <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">${m.caseNo} . ${TYPE_LABELS[m.type]}</div>
+                <div style="font-size:11px;margin-top:4px;">Hearing: ${formatDate(m.dateAllocated)}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:13px;font-weight:600;color:${b.color};">${b.label}</div>
+                ${m.phase2CompletedBy ? '<div style="font-size:10px;padding:2px 6px;border-radius:4px;background:#DCFCE7;color:#166534;margin-top:3px;">Enrolled</div>' : '<div style="font-size:10px;padding:2px 6px;border-radius:4px;background:#FEF3C7;color:#92400E;margin-top:3px;">Pending enrolment</div>'}
+              </div>
+            </div>`;
+          }).join('')}
+      </div>
+    </div>`;
+
+  // All matters list
+  const allMattersHtml = `
     <div class="checklist-card">
       <div class="checklist-card-header">
         <div class="checklist-card-title">All active matters</div>
@@ -441,7 +522,7 @@ function renderDashboard() {
         const done  = items.filter(i => m.checked && m.checked[i.id]).length;
         const pct   = items.length ? Math.round(done / items.length * 100) : 0;
         const needsFollowup = m.dateApplied && calendarDaysSince(m.dateApplied) > 20 && !m.dateAllocated;
-        const attyName = ATTORNEYS.find(a => a.email === m.atty)?.name || m.atty;
+        const attyName = ATTORNEYS.find(a => a.email === m.atty) ? ATTORNEYS.find(a => a.email === m.atty).name : m.atty;
         return `<div class="checklist-item" onclick="openMatter('${m.id}')" style="cursor:pointer;">
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:500;color:var(--ink);">${m.name}</div>
@@ -457,6 +538,8 @@ function renderDashboard() {
         </div>`;
       }).join('')}
     </div>`;
+
+  mainContent.innerHTML = ageAnalysisHtml + allMattersHtml;
 }
 
 function renderMatter(m) {
@@ -533,7 +616,10 @@ function renderMatter(m) {
         <div class="meta-item"><div class="meta-label">Phase 1</div><div class="meta-value">${p1done}/${p1items.length}</div></div>
         <div class="meta-item"><div class="meta-label">Phase 2</div><div class="meta-value">${p2done}/${p2items.length}</div></div>
       </div>
-      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <button class="btn btn-sm" style="color:#999;border-color:#e0e0e0;font-size:11px;" onclick="deleteMatter('${m.id}')">
+          Delete matter
+        </button>
         <button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;" onclick="concludeMatter('${m.id}')">
           [check] Conclude matter
         </button>
@@ -649,6 +735,30 @@ window.switchPhase    = switchPhase;
 window.addToCalendar  = addToCalendar;
 window.addAllToCalendar = addAllToCalendar;
 window.addFollowUpReminder = addFollowUpReminder;
+
+window.deleteMatter = async function(matterId) {
+  const pin = prompt('Enter PIN to delete this matter:');
+  if (pin !== '1902') {
+    toast('Incorrect PIN - deletion not authorised', true);
+    return;
+  }
+  const m = matters[matterId];
+  if (!m) return;
+  const confirm_del = prompt('Type DELETE to confirm permanent removal of: ' + m.name);
+  if (confirm_del !== 'DELETE') {
+    toast('Deletion cancelled', true);
+    return;
+  }
+  try {
+    const { deleteDoc: dd } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await dd(doc(db, 'matters', matterId));
+    currentMatterId = null;
+    document.getElementById('page-title').textContent = 'Dashboard';
+    document.getElementById('page-sub').textContent = 'Litigation matter tracking';
+    renderDashboard();
+    toast('Matter permanently deleted');
+  } catch(e) { toast('Error deleting: ' + e.message, true); }
+}
 
 window.completePhase = async function(matterId, phase) {
   const names = ATTORNEYS.map(a => a.name);
