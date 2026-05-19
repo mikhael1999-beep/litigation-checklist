@@ -191,13 +191,7 @@ async function setDateAllocated(matterId, val) {
       const caseNo = m.caseNo || '';
       const type = TYPE_LABELS[m.type] || '';
       const subject = '[HEARING DATE] ' + matterName + ' (' + caseNo + ')';
-      const body = 'Court hearing date for ' + type + '.
-
-Matter: ' + matterName + '
-Case: ' + caseNo + '
-Date: ' + formatDate(val) + '
-
-Albert Hibbert Attorneys Inc.';
+      const body = 'Court hearing date for ' + type + '. Matter: ' + matterName + '. Case: ' + caseNo + '. Date: ' + formatDate(val) + '. Albert Hibbert Attorneys Inc.';
       const fmt = d => { const x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
       const startDt = fmt(val);
       const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startDt + '&enddt=' + startDt + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(a=>a.email).join(';');
@@ -306,23 +300,11 @@ function addToCalendar(matterId, deadlineLabel, deadlineDate) {
 function addFollowUpReminder(matterId) {
   const m = matters[matterId];
   if (!m || !m.dateApplied) return;
-  // Calculate 14 court days from date applied
   const followUpDate = addCourtDays(new Date(m.dateApplied), 14);
-  const subject = `[FOLLOW-UP] Date application - ${m.name} (${m.caseNo})`;
-  const body = `14 court days have passed since the date application was submitted on ${formatDate(m.dateApplied)}.
-
-If no court date has been allocated yet, please follow up:
-1. Via email to the Registrar's office
-2. In person at the Registrar's office
-
-Matter: ${m.name}
-Case: ${m.caseNo}
-Type: ${TYPE_LABELS[m.type]}
-Date applied: ${formatDate(m.dateApplied)}
-
-Albert Hibbert Attorneys Inc.`;
-  const fmt = d => { const x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
-  const url = `https://outlook.office.com/calendar/action/compose?subject=${encodeURIComponent(subject)}&startdt=${fmt(followUpDate)}&enddt=${fmt(followUpDate)}&body=${encodeURIComponent(body)}&to=${ATTORNEYS.map(a=>a.email).join(';')}`;
+  const subject = '[FOLLOW-UP] Date application - ' + m.name + ' (' + m.caseNo + ')';
+  const body = '14 court days have passed since the date application was submitted on ' + formatDate(m.dateApplied) + '. If no court date has been allocated, please follow up via email and in person with the Registrar. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Albert Hibbert Attorneys Inc.';
+  const fmt = function(d) { var x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
+  const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + fmt(followUpDate) + '&enddt=' + fmt(followUpDate) + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(function(a){return a.email;}).join(';');
   window.open(url, '_blank');
   toast('14-day follow-up reminder added to Outlook');
 }
@@ -762,10 +744,8 @@ window.deleteMatter = async function(matterId) {
 
 window.completePhase = async function(matterId, phase) {
   const names = ATTORNEYS.map(a => a.name);
-  const nameList = names.map((n, i) => (i+1) + '. ' + n).join('
-');
-  const input = prompt('Select your name by entering the number:
-' + nameList);
+  const nameList = names.map((n, i) => (i+1) + '. ' + n).join(' | ');
+  const input = prompt('Select your name (enter number): ' + nameList);
   if (!input) return;
   const idx = parseInt(input) - 1;
   if (isNaN(idx) || idx < 0 || idx >= names.length) {
