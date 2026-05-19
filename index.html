@@ -193,11 +193,12 @@ async function setDateAllocated(matterId, val) {
       const subject = '[HEARING DATE] ' + matterName + ' (' + caseNo + ')';
       const body = 'Court hearing date for ' + type + '. Matter: ' + matterName + '. Case: ' + caseNo + '. Date: ' + formatDate(val) + '. Albert Hibbert Attorneys Inc.';
       const dh = new Date(val);
-      const pad = n => String(n).padStart(2,'0');
-      const ymd = dh.getFullYear() + '-' + pad(dh.getMonth()+1) + '-' + pad(dh.getDate());
-      const startDt = ymd + 'T09:00:00';
-      const endDt   = ymd + 'T17:00:00';
-      const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + encodeURIComponent(startDt) + '&enddt=' + encodeURIComponent(endDt) + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(a=>a.email).join(';');
+      const padH = function(n) { return String(n).padStart(2,'0'); };
+      const ymdH = dh.getFullYear() + '-' + padH(dh.getMonth()+1) + '-' + padH(dh.getDate());
+      const startDt = ymdH + 'T09:00:00';
+      const endDt   = ymdH + 'T17:00:00';
+      const toH = ATTORNEYS.map(function(a){return a.email;}).join(';');
+      const url = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startDt + '&enddt=' + endDt + '&body=' + encodeURIComponent(body) + '&to=' + encodeURIComponent(toH) + '&path=%2Fcalendar%2Faction%2Fcompose';
       setTimeout(() => window.open(url, '_blank'), 800);
     }
   } catch(e) { toast('Error saving', true); }
@@ -296,10 +297,12 @@ function addToCalendar(matterId, deadlineLabel, deadlineDate) {
   const body = 'Litigation deadline: ' + deadlineLabel + '. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Albert Hibbert Attorneys Inc.';
   const d = new Date(deadlineDate);
   const pad = function(n) { return String(n).padStart(2,'0'); };
+  // Outlook Web requires dates without encoding and in this exact format
   const ymd = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
   const startdt = ymd + 'T09:00:00';
   const enddt   = ymd + 'T10:00:00';
-  const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + encodeURIComponent(startdt) + '&enddt=' + encodeURIComponent(enddt) + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(function(a){return a.email;}).join(';');
+  const to = ATTORNEYS.map(function(a){return a.email;}).join(';');
+  const url = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startdt + '&enddt=' + enddt + '&body=' + encodeURIComponent(body) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
   window.open(url, '_blank');
   toast('Opening Outlook calendar...');
 }
@@ -711,7 +714,21 @@ window.setDateAllocated = setDateAllocated;
 window.switchPhase    = switchPhase;
 window.addToCalendar  = addToCalendar;
 window.addAllToCalendar = addAllToCalendar;
-window.addFollowUpReminder = addFollowUpReminder;
+window.addFollowUpReminder = function(matterId) {
+  const m = matters[matterId];
+  if (!m || !m.dateApplied) return;
+  const followUpDate = addCourtDays(new Date(m.dateApplied), 14);
+  const subject = '[FOLLOW-UP] Date application - ' + m.name + ' (' + m.caseNo + ')';
+  const body = '14 court days since date application on ' + formatDate(m.dateApplied) + '. Follow up with Registrar. Matter: ' + m.name + '. Case: ' + m.caseNo + '.';
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+  const ymd = followUpDate.getFullYear() + '-' + pad(followUpDate.getMonth()+1) + '-' + pad(followUpDate.getDate());
+  const startdt = ymd + 'T09:00:00';
+  const enddt   = ymd + 'T10:00:00';
+  const to = ATTORNEYS.map(function(a){return a.email;}).join(';');
+  const url = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startdt + '&enddt=' + enddt + '&body=' + encodeURIComponent(body) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+  window.open(url, '_blank');
+  toast('14-day follow-up reminder added to Outlook');
+};
 
 window.deleteMatter = async function(matterId) {
   const pin = prompt('Enter PIN to delete this matter:');
