@@ -118,12 +118,12 @@ const TYPE_LABELS = {
 };
 
 const ATTORNEYS = [
-  { name: "Westine van Tonder",  email: "westine@hibbertlaw.co.za" },
-  { name: "Clarissa Viljoen",    email: "clarissa@hibbertlaw.co.za" },
-  { name: "Charne Liebenberg",   email: "charne@hibbertlaw.co.za" },
-  { name: "Liezel Coetzee",      email: "liezel@hibbertlaw.co.za" },
-  { name: "Mikhael Venter",      email: "aha3@hibbertlaw.co.za" },
   { name: "Jaco du Plooy",       email: "jaco@hibbertlaw.co.za" },
+  { name: "Mikhael Venter",      email: "aha3@hibbertlaw.co.za" },
+  { name: "Westine van Tonder",  email: "aha4@hibbertlaw.co.za" },
+  { name: "Liezel Coetzee",      email: "aha5@hibbertlaw.co.za" },
+  { name: "Clarissa Viljoen",    email: "aha6@hibbertlaw.co.za" },
+  { name: "Charne Liebenberg",   email: "aha7@hibbertlaw.co.za" },
 ];
 
 // ============================================================
@@ -192,9 +192,12 @@ async function setDateAllocated(matterId, val) {
       const type = TYPE_LABELS[m.type] || '';
       const subject = '[HEARING DATE] ' + matterName + ' (' + caseNo + ')';
       const body = 'Court hearing date for ' + type + '. Matter: ' + matterName + '. Case: ' + caseNo + '. Date: ' + formatDate(val) + '. Albert Hibbert Attorneys Inc.';
-      const fmt = d => { const x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
-      const startDt = fmt(val);
-      const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startDt + '&enddt=' + startDt + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(a=>a.email).join(';');
+      const dh = new Date(val);
+      const pad = n => String(n).padStart(2,'0');
+      const ymd = dh.getFullYear() + '-' + pad(dh.getMonth()+1) + '-' + pad(dh.getDate());
+      const startDt = ymd + 'T09:00:00';
+      const endDt   = ymd + 'T17:00:00';
+      const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + encodeURIComponent(startDt) + '&enddt=' + encodeURIComponent(endDt) + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(a=>a.email).join(';');
       setTimeout(() => window.open(url, '_blank'), 800);
     }
   } catch(e) { toast('Error saving', true); }
@@ -289,24 +292,16 @@ function calendarDaysSince(dateStr) {
 // ============================================================
 function addToCalendar(matterId, deadlineLabel, deadlineDate) {
   const m = matters[matterId];
-  const subject = `[DEADLINE] ${deadlineLabel} - ${m.name} (${m.caseNo})`;
-  const body    = `Litigation deadline for ${TYPE_LABELS[m.type]}.\n\nMatter: ${m.name}\nCase: ${m.caseNo}\nDeadline: ${deadlineLabel}\nDate: ${formatDate(deadlineDate)}\n\nAlbert Hibbert Attorneys Inc.`;
-  const fmt = d => { const x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
-  const url = `https://outlook.office.com/calendar/action/compose?subject=${encodeURIComponent(subject)}&startdt=${fmt(deadlineDate)}&enddt=${fmt(deadlineDate)}&body=${encodeURIComponent(body)}&to=${ATTORNEYS.map(a=>a.email).join(';')}`;
+  const subject = '[DEADLINE] ' + deadlineLabel + ' - ' + m.name + ' (' + m.caseNo + ')';
+  const body = 'Litigation deadline: ' + deadlineLabel + '. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Albert Hibbert Attorneys Inc.';
+  const d = new Date(deadlineDate);
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+  const ymd = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  const startdt = ymd + 'T09:00:00';
+  const enddt   = ymd + 'T10:00:00';
+  const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + encodeURIComponent(startdt) + '&enddt=' + encodeURIComponent(enddt) + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(function(a){return a.email;}).join(';');
   window.open(url, '_blank');
   toast('Opening Outlook calendar...');
-}
-
-function addFollowUpReminder(matterId) {
-  const m = matters[matterId];
-  if (!m || !m.dateApplied) return;
-  const followUpDate = addCourtDays(new Date(m.dateApplied), 14);
-  const subject = '[FOLLOW-UP] Date application - ' + m.name + ' (' + m.caseNo + ')';
-  const body = '14 court days have passed since the date application was submitted on ' + formatDate(m.dateApplied) + '. If no court date has been allocated, please follow up via email and in person with the Registrar. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Albert Hibbert Attorneys Inc.';
-  const fmt = function(d) { var x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
-  const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + fmt(followUpDate) + '&enddt=' + fmt(followUpDate) + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(function(a){return a.email;}).join(';');
-  window.open(url, '_blank');
-  toast('14-day follow-up reminder added to Outlook');
 }
 
 function addAllToCalendar(matterId) {
@@ -989,12 +984,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper-2);color:var(--ink)
         <div class="form-field">
           <label class="form-label">Responsible person</label>
           <select class="form-select" id="m-attorney">
-            <option value="westine@hibbertlaw.co.za">Westine van Tonder</option>
-            <option value="clarissa@hibbertlaw.co.za">Clarissa Viljoen</option>
-            <option value="charne@hibbertlaw.co.za">Charne Liebenberg</option>
-            <option value="liezel@hibbertlaw.co.za">Liezel Coetzee</option>
-            <option value="aha3@hibbertlaw.co.za">Mikhael Venter</option>
             <option value="jaco@hibbertlaw.co.za">Jaco du Plooy</option>
+            <option value="aha3@hibbertlaw.co.za">Mikhael Venter</option>
+            <option value="aha4@hibbertlaw.co.za">Westine van Tonder</option>
+            <option value="aha5@hibbertlaw.co.za">Liezel Coetzee</option>
+            <option value="aha6@hibbertlaw.co.za">Clarissa Viljoen</option>
+            <option value="aha7@hibbertlaw.co.za">Charne Liebenberg</option>
           </select>
         </div>
         <div class="form-field">
