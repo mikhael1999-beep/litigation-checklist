@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Litigation Checklist — Albert Hibbert Attorneys</title>
+<title>Litigation Checklist - Albert Hibbert Attorneys</title>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -44,7 +44,7 @@ const CHECKLISTS = {
         { id: "u2_5", label: "Compliant practice note uploaded to CaseLines", note: "Deadline: 5 court days before set down week" },
         { id: "u2_6", label: "Updated practice note with Judge name and court number uploaded" },
         { id: "u2_7", label: "Draft order of court uploaded" },
-        { id: "u2_8", label: "Short heads of argument filed (if applicable)", note: "Optional — if directed" },
+        { id: "u2_8", label: "Short heads of argument filed (if applicable)", note: "Optional - if directed" },
       ],
       deadlines: [
         { label: "Begin final enrolment", courtDays: -15 },
@@ -100,7 +100,7 @@ const CHECKLISTS = {
       items: [
         { id: "d2_1", label: "Documents moved from CourtOnline to CaseLines" },
         { id: "d2_2", label: "CaseLines sections made compliant" },
-        { id: "d2_3", label: "Application reviewed — registrar decides" },
+        { id: "d2_3", label: "Application reviewed - registrar decides" },
         { id: "d2_4", label: "Draft order confirmed and uploaded" },
         { id: "d2_5", label: "Compliance statement confirmed" },
       ],
@@ -182,7 +182,7 @@ async function setDateApplied(matterId, val) {
 async function setDateAllocated(matterId, val) {
   try {
     await updateDoc(doc(db, 'matters', matterId), { dateAllocated: val || null });
-    if (val) { currentPhase = 2; toast('Date allocated — matter moved to Phase 2'); }
+    if (val) { currentPhase = 2; toast('Date allocated - matter moved to Phase 2'); }
   } catch(e) { toast('Error saving', true); }
 }
 
@@ -225,7 +225,7 @@ async function createMatter() {
   closeModal();
   currentMatterId = id;
   currentPhase = 1;
-  toast('Matter created — ' + name);
+  toast('Matter created - ' + name);
 
   // Clear form
   ['m-name','m-case','m-ghost'].forEach(id => document.getElementById(id).value = '');
@@ -261,7 +261,7 @@ function courtDaysUntil(date) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   return new Date(dateStr).toLocaleDateString('en-ZA', { day:'numeric', month:'long', year:'numeric' });
 }
 
@@ -275,7 +275,7 @@ function calendarDaysSince(dateStr) {
 // ============================================================
 function addToCalendar(matterId, deadlineLabel, deadlineDate) {
   const m = matters[matterId];
-  const subject = `[DEADLINE] ${deadlineLabel} — ${m.name} (${m.caseNo})`;
+  const subject = `[DEADLINE] ${deadlineLabel} - ${m.name} (${m.caseNo})`;
   const body    = `Litigation deadline for ${TYPE_LABELS[m.type]}.\n\nMatter: ${m.name}\nCase: ${m.caseNo}\nDeadline: ${deadlineLabel}\nDate: ${formatDate(deadlineDate)}\n\nAlbert Hibbert Attorneys Inc.`;
   const fmt = d => { const x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
   const url = `https://outlook.office.com/calendar/action/compose?subject=${encodeURIComponent(subject)}&startdt=${fmt(deadlineDate)}&enddt=${fmt(deadlineDate)}&body=${encodeURIComponent(body)}&to=${ATTORNEYS.map(a=>a.email).join(';')}`;
@@ -288,7 +288,7 @@ function addFollowUpReminder(matterId) {
   if (!m || !m.dateApplied) return;
   // Calculate 14 court days from date applied
   const followUpDate = addCourtDays(new Date(m.dateApplied), 14);
-  const subject = `[FOLLOW-UP] Date application — ${m.name} (${m.caseNo})`;
+  const subject = `[FOLLOW-UP] Date application - ${m.name} (${m.caseNo})`;
   const body = `14 court days have passed since the date application was submitted on ${formatDate(m.dateApplied)}.
 
 If no court date has been allocated yet, please follow up:
@@ -349,7 +349,7 @@ function renderSidebar() {
     if (isConcluded) {
       return `<div class="matter-item" data-id="${m.id}" style="opacity:0.5;">
         <div class="matter-title" style="text-decoration:line-through;">${m.name}</div>
-        <div class="matter-meta">${m.caseNo} · Concluded</div>
+        <div class="matter-meta">${m.caseNo} . Concluded</div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
           <span class="matter-badge" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);">Concluded</span>
           <button onclick="restoreMatter('${m.id}')" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:10px;cursor:pointer;padding:0;font-family:inherit;">Restore</button>
@@ -363,7 +363,7 @@ function renderSidebar() {
     const needsFollowup = m.dateApplied && calendarDaysSince(m.dateApplied) > 20 && !m.dateAllocated;
     return `<div class="matter-item ${currentMatterId === m.id ? 'active' : ''}" data-id="${m.id}" onclick="openMatter('${m.id}')">
       <div class="matter-title">${m.name}</div>
-      <div class="matter-meta">${m.caseNo} · ${done}/${items.length} done</div>
+      <div class="matter-meta">${m.caseNo} . ${done}/${items.length} done</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
         <span class="matter-badge badge-${m.type}">${TYPE_LABELS[m.type]}</span>
         <span class="matter-badge badge-phase${phase}">Phase ${phase}</span>
@@ -387,7 +387,7 @@ function openMatter(id) {
   const m = matters[id];
   if (!m) return;
   document.getElementById('page-title').textContent = m.name;
-  document.getElementById('page-sub').textContent = TYPE_LABELS[m.type] + ' · ' + m.caseNo;
+  document.getElementById('page-sub').textContent = TYPE_LABELS[m.type] + ' . ' + m.caseNo;
   renderMatter(m);
 }
 
@@ -404,7 +404,7 @@ function renderDashboard() {
   const content = document.getElementById('main-content');
   content.innerHTML = !all.length ? `
     <div class="empty-state">
-      <div class="empty-icon">⚖</div>
+      <div class="empty-icon">[Law]</div>
       <div class="empty-title">No matters yet</div>
       <div class="empty-sub">Create your first litigation matter to start tracking checklist progress and deadlines.</div>
       <button class="btn btn-primary" onclick="openNewMatter()">+ Create first matter</button>
@@ -425,13 +425,13 @@ function renderDashboard() {
         return `<div class="checklist-item" onclick="openMatter('${m.id}')" style="cursor:pointer;">
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:500;color:var(--ink);">${m.name}</div>
-            <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">${m.caseNo} · ${TYPE_LABELS[m.type]} · Phase ${phase} · ${attyName}</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">${m.caseNo} . ${TYPE_LABELS[m.type]} . Phase ${phase} . ${attyName}</div>
             <div style="margin-top:6px;height:4px;background:var(--paper-3);border-radius:2px;width:200px;max-width:100%;">
               <div style="height:100%;background:${pct===100?'#166534':'#B45309'};border-radius:2px;width:${pct}%;transition:width 0.3s;"></div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-            ${needsFollowup ? '<span style="font-size:11px;font-weight:500;color:#991B1B;background:#FEE2E2;padding:3px 8px;border-radius:4px;">⚠ Follow-up</span>' : ''}
+            ${needsFollowup ? '<span style="font-size:11px;font-weight:500;color:#991B1B;background:#FEE2E2;padding:3px 8px;border-radius:4px;">[!] Follow-up</span>' : ''}
             <span style="font-size:12px;color:var(--ink-3);">${done}/${items.length}</span>
           </div>
         </div>`;
@@ -457,7 +457,7 @@ function renderMatter(m) {
     const done = m.checked && m.checked[item.id];
     return `<div class="checklist-item ${done ? 'completed' : ''}">
       <div class="check-box ${done ? 'checked' : ''}" onclick="toggleCheck('${m.id}','${item.id}')">
-        ${done ? '<span class="check-mark">✓</span>' : ''}
+        ${done ? '<span class="check-mark">[check]</span>' : ''}
       </div>
       <div>
         <div class="item-label ${done ? 'done' : ''}">${item.label}</div>
@@ -477,14 +477,14 @@ function renderMatter(m) {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="deadline-date">${formatDate(dd)}</span>
           <span class="deadline-days ${cls}">${left === null ? 'Past' : left + ' court days'}</span>
-          <button class="outlook-btn" onclick="addToCalendar('${m.id}','${d.label}','${dd.toISOString()}')">📅 Outlook</button>
+          <button class="outlook-btn" onclick="addToCalendar('${m.id}','${d.label}','${dd.toISOString()}')">[Cal] Outlook</button>
         </div>
       </div>`;
     }).join('');
     deadlinesHtml = `
       <div class="deadline-card">
-        <div class="deadline-header">⏱ &nbsp;Calculated deadlines from ${formatDate(m.dateAllocated)}
-          <button class="btn btn-sm btn-gold" onclick="addAllToCalendar('${m.id}')" style="margin-left:auto;">📅 Add all to Outlook</button>
+        <div class="deadline-header">[Timer] &nbsp;Calculated deadlines from ${formatDate(m.dateAllocated)}
+          <button class="btn btn-sm btn-gold" onclick="addAllToCalendar('${m.id}')" style="margin-left:auto;">[Cal] Add all to Outlook</button>
         </div>
         ${dls}
       </div>`;
@@ -498,33 +498,33 @@ function renderMatter(m) {
         <div>
           <div class="matter-type-label">${TYPE_LABELS[m.type]}</div>
           <div class="matter-case-name">${m.name}</div>
-          <div class="matter-ref">${m.caseNo}${m.ghost ? ' · Ghost: ' + m.ghost : ''} · ${attyName}</div>
+          <div class="matter-ref">${m.caseNo}${m.ghost ? ' . Ghost: ' + m.ghost : ''} . ${attyName}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:11px;color:var(--ink-3);margin-bottom:4px;">Phase ${phase} of 2</div>
           <div style="font-size:13px;font-weight:500;color:${phase===2?'var(--green)':'var(--amber)'};">
-            ${phase === 2 ? '✓ Date allocated' : '⏳ Awaiting date'}
+            ${phase === 2 ? '[check] Date allocated' : '  Awaiting date'}
           </div>
         </div>
       </div>
       <div class="matter-meta-row">
-        <div class="meta-item"><div class="meta-label">Date applied</div><div class="meta-value">${m.dateApplied ? formatDate(m.dateApplied) : '—'}</div></div>
+        <div class="meta-item"><div class="meta-label">Date applied</div><div class="meta-value">${m.dateApplied ? formatDate(m.dateApplied) : '-'}</div></div>
         <div class="meta-item"><div class="meta-label">Date allocated</div><div class="meta-value">${m.dateAllocated ? formatDate(m.dateAllocated) : 'Pending'}</div></div>
         <div class="meta-item"><div class="meta-label">Phase 1</div><div class="meta-value">${p1done}/${p1items.length}</div></div>
         <div class="meta-item"><div class="meta-label">Phase 2</div><div class="meta-value">${p2done}/${p2items.length}</div></div>
       </div>
       <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
         <button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;" onclick="concludeMatter('${m.id}')">
-          ✓ Conclude matter
+          [check] Conclude matter
         </button>
       </div>
     </div>
 
     ${needsFollowup ? `
     <div class="followup-alert">
-      <div class="followup-icon">⚠</div>
+      <div class="followup-icon">[!]</div>
       <div class="followup-text">
-        <div class="followup-title">Follow-up required — ${daysSince} days since date application</div>
+        <div class="followup-title">Follow-up required - ${daysSince} days since date application</div>
         More than 14 court days have passed since the date was applied for on ${formatDate(m.dateApplied)}.
         Please follow up via email and in person with the Registrar's office.
       </div>
@@ -532,32 +532,32 @@ function renderMatter(m) {
 
     ${!m.dateApplied ? `
     <div class="date-input-row">
-      <span class="date-input-label">📅 Record date application submitted:</span>
+      <span class="date-input-label">[Cal] Record date application submitted:</span>
       <input type="date" class="date-input" onchange="setDateApplied('${m.id}',this.value)" value="" />
     </div>` : `
     <div class="date-input-row" style="background:#EFF6FF;border-color:#BFDBFE;">
-      <span class="date-input-label" style="color:#1E3A5F;">📅 Date applied: ${formatDate(m.dateApplied)}</span>
+      <span class="date-input-label" style="color:#1E3A5F;">[Cal] Date applied: ${formatDate(m.dateApplied)}</span>
       <button class="outlook-btn" style="background:#1E3A5F;" onclick="addFollowUpReminder('${m.id}')">
-        📅 Set 14-day follow-up in Outlook
+        [Cal] Set 14-day follow-up in Outlook
       </button>
       <input type="date" class="date-input" style="margin-left:auto;" onchange="setDateApplied('${m.id}',this.value)" value="${m.dateApplied||''}" title="Change date applied" />
     </div>`}
 
     ${m.dateApplied && !m.dateAllocated ? `
     <div class="date-input-row">
-      <span class="date-input-label">🎯 Date allocated? Enter to move to Phase 2:</span>
+      <span class="date-input-label">[target] Date allocated? Enter to move to Phase 2:</span>
       <input type="date" class="date-input" onchange="setDateAllocated('${m.id}',this.value)" value="" />
     </div>` : ''}
 
     ${m.dateAllocated ? `
     <div style="background:var(--green-light);border:1px solid #BBF7D0;border-radius:8px;padding:0.75rem 1.5rem;margin-bottom:1.25rem;font-size:13px;color:var(--green);font-weight:500;display:flex;align-items:center;gap:1rem;">
-      ✓ Court date: ${formatDate(m.dateAllocated)} — Phase 2 active
+      [check] Court date: ${formatDate(m.dateAllocated)} - Phase 2 active
       <input type="date" class="date-input" style="margin-left:auto;" onchange="setDateAllocated('${m.id}',this.value)" value="${m.dateAllocated||''}" title="Change date" />
     </div>` : ''}
 
     <div class="phase-tabs">
-      <button class="phase-tab ${currentPhase===1?'active':''}" onclick="switchPhase(1,'${m.id}')">Phase 1 — ${cl.phase1.title}</button>
-      <button class="phase-tab ${currentPhase===2?'active':''}" onclick="switchPhase(2,'${m.id}')" ${!m.dateAllocated?'disabled':''}>Phase 2 — ${cl.phase2.title}</button>
+      <button class="phase-tab ${currentPhase===1?'active':''}" onclick="switchPhase(1,'${m.id}')">Phase 1 - ${cl.phase1.title}</button>
+      <button class="phase-tab ${currentPhase===2?'active':''}" onclick="switchPhase(2,'${m.id}')" ${!m.dateAllocated?'disabled':''}>Phase 2 - ${cl.phase2.title}</button>
     </div>
 
     <div class="checklist-card">
@@ -774,10 +774,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper-2);color:var(--ink)
     <div class="stat-mini"><div class="stat-mini-label">Phase 2</div><div class="stat-mini-val" id="stat-p2">0</div></div>
   </div>
   <div class="sidebar-section">Dashboard</div>
-  <button class="sidebar-btn active" onclick="showDashboard()">⊞ &nbsp;Overview</button>
+  <button class="sidebar-btn active" onclick="showDashboard()">  &nbsp;Overview</button>
   <div class="sidebar-section">Active matters</div>
   <div id="matter-list"><div style="padding:0.75rem 1.5rem;font-size:12px;color:rgba(255,255,255,0.25);">Connecting...</div></div>
-  <div class="sidebar-footer">Gauteng Division · Directive 1/2024</div>
+  <div class="sidebar-footer">Gauteng Division . Directive 1/2024</div>
 </div>
 <div class="main">
   <div class="topbar">
@@ -797,7 +797,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper-2);color:var(--ink)
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">New matter</div>
-      <button class="btn btn-sm" onclick="closeModal()">✕</button>
+      <button class="btn btn-sm" onclick="closeModal()">[x]</button>
     </div>
     <div class="modal-body">
       <div class="form-field">
