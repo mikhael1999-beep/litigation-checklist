@@ -603,8 +603,7 @@ window.addFollowUpReminder = addFollowUpReminder;
 window.concludeMatter = async function(matterId) {
   const m = matters[matterId];
   if (!m) return;
-  const note = prompt('Add a conclusion note (optional):
-e.g. Order granted 18 May 2026');
+  const note = prompt('Add a conclusion note (optional) - e.g. Order granted 18 May 2026');
   if (note === null) return; // cancelled
   try {
     await updateDoc(doc(db, 'matters', matterId), {
