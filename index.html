@@ -283,6 +283,30 @@ function addToCalendar(matterId, deadlineLabel, deadlineDate) {
   toast('Opening Outlook calendar...');
 }
 
+function addFollowUpReminder(matterId) {
+  const m = matters[matterId];
+  if (!m || !m.dateApplied) return;
+  // Calculate 14 court days from date applied
+  const followUpDate = addCourtDays(new Date(m.dateApplied), 14);
+  const subject = `[FOLLOW-UP] Date application — ${m.name} (${m.caseNo})`;
+  const body = `14 court days have passed since the date application was submitted on ${formatDate(m.dateApplied)}.
+
+If no court date has been allocated yet, please follow up:
+1. Via email to the Registrar's office
+2. In person at the Registrar's office
+
+Matter: ${m.name}
+Case: ${m.caseNo}
+Type: ${TYPE_LABELS[m.type]}
+Date applied: ${formatDate(m.dateApplied)}
+
+Albert Hibbert Attorneys Inc.`;
+  const fmt = d => { const x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
+  const url = `https://outlook.office.com/calendar/action/compose?subject=${encodeURIComponent(subject)}&startdt=${fmt(followUpDate)}&enddt=${fmt(followUpDate)}&body=${encodeURIComponent(body)}&to=${ATTORNEYS.map(a=>a.email).join(';')}`;
+  window.open(url, '_blank');
+  toast('14-day follow-up reminder added to Outlook');
+}
+
 function addAllToCalendar(matterId) {
   const m = matters[matterId];
   if (!m || !m.dateAllocated) return;
@@ -483,7 +507,14 @@ function renderMatter(m) {
     <div class="date-input-row">
       <span class="date-input-label">📅 Record date application submitted:</span>
       <input type="date" class="date-input" onchange="setDateApplied('${m.id}',this.value)" value="" />
-    </div>` : ''}
+    </div>` : `
+    <div class="date-input-row" style="background:#EFF6FF;border-color:#BFDBFE;">
+      <span class="date-input-label" style="color:#1E3A5F;">📅 Date applied: ${formatDate(m.dateApplied)}</span>
+      <button class="outlook-btn" style="background:#1E3A5F;" onclick="addFollowUpReminder('${m.id}')">
+        📅 Set 14-day follow-up in Outlook
+      </button>
+      <input type="date" class="date-input" style="margin-left:auto;" onchange="setDateApplied('${m.id}',this.value)" value="${m.dateApplied||''}" title="Change date applied" />
+    </div>`}
 
     ${m.dateApplied && !m.dateAllocated ? `
     <div class="date-input-row">
@@ -540,6 +571,7 @@ window.setDateAllocated = setDateAllocated;
 window.switchPhase    = switchPhase;
 window.addToCalendar  = addToCalendar;
 window.addAllToCalendar = addAllToCalendar;
+window.addFollowUpReminder = addFollowUpReminder;
 
 // Start
 startListening();
