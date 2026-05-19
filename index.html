@@ -182,7 +182,27 @@ async function setDateApplied(matterId, val) {
 async function setDateAllocated(matterId, val) {
   try {
     await updateDoc(doc(db, 'matters', matterId), { dateAllocated: val || null });
-    if (val) { currentPhase = 2; toast('Date allocated - matter moved to Phase 2'); }
+    if (val) {
+      currentPhase = 2;
+      toast('Date allocated - matter moved to Phase 2');
+      // Automatically open Outlook to add hearing date to all calendars
+      const m = matters[matterId] || {};
+      const matterName = m.name || 'Matter';
+      const caseNo = m.caseNo || '';
+      const type = TYPE_LABELS[m.type] || '';
+      const subject = '[HEARING DATE] ' + matterName + ' (' + caseNo + ')';
+      const body = 'Court hearing date for ' + type + '.
+
+Matter: ' + matterName + '
+Case: ' + caseNo + '
+Date: ' + formatDate(val) + '
+
+Albert Hibbert Attorneys Inc.';
+      const fmt = d => { const x = new Date(d); x.setHours(9,0,0,0); return x.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z'; };
+      const startDt = fmt(val);
+      const url = 'https://outlook.office.com/calendar/action/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startDt + '&enddt=' + startDt + '&body=' + encodeURIComponent(body) + '&to=' + ATTORNEYS.map(a=>a.email).join(';');
+      setTimeout(() => window.open(url, '_blank'), 800);
+    }
   } catch(e) { toast('Error saving', true); }
 }
 
@@ -555,6 +575,24 @@ function renderMatter(m) {
       <input type="date" class="date-input" style="margin-left:auto;" onchange="setDateAllocated('${m.id}',this.value)" value="${m.dateAllocated||''}" title="Change date" />
     </div>` : ''}
 
+    ${m.phase1CompletedBy ? `
+    <div style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.875rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">[check]</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#166534;">Date application requirements completed</div>
+        <div style="font-size:12px;color:#166534;margin-top:2px;">Completed by ${m.phase1CompletedBy} on ${formatDate(m.phase1CompletedDate)}</div>
+      </div>
+    </div>` : ''}
+
+    ${m.phase2CompletedBy ? `
+    <div style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.875rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">[check]</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#166534;">Enrolment completed</div>
+        <div style="font-size:12px;color:#166534;margin-top:2px;">Enrolled by ${m.phase2CompletedBy} on ${formatDate(m.phase2CompletedDate)}</div>
+      </div>
+    </div>` : ''}
+
     <div class="phase-tabs">
       <button class="phase-tab ${currentPhase===1?'active':''}" onclick="switchPhase(1,'${m.id}')">Phase 1 - ${cl.phase1.title}</button>
       <button class="phase-tab ${currentPhase===2?'active':''}" onclick="switchPhase(2,'${m.id}')" ${!m.dateAllocated?'disabled':''}>Phase 2 - ${cl.phase2.title}</button>
@@ -566,6 +604,18 @@ function renderMatter(m) {
         <span class="progress-pill">${currentPhase===1?p1done+'/'+p1items.length:p2done+'/'+p2items.length} complete</span>
       </div>
       ${checklistHtml}
+      ${currentPhase === 1 && !m.phase1CompletedBy ? `
+      <div style="padding:12px 1.5rem;border-top:1px solid var(--border);background:var(--paper-2);">
+        <button class="btn btn-sm" style="background:#166534;color:white;border-color:#166534;width:100%;justify-content:center;" onclick="completePhase('${m.id}',1)">
+          [check] Mark Phase 1 complete - all date application requirements met
+        </button>
+      </div>` : ''}
+      ${currentPhase === 2 && m.dateAllocated && !m.phase2CompletedBy ? `
+      <div style="padding:12px 1.5rem;border-top:1px solid var(--border);background:var(--paper-2);">
+        <button class="btn btn-sm" style="background:#166534;color:white;border-color:#166534;width:100%;justify-content:center;" onclick="completePhase('${m.id}',2)">
+          [check] Mark enrolment complete
+        </button>
+      </div>` : ''}
     </div>
 
     ${deadlinesHtml}
@@ -599,6 +649,34 @@ window.switchPhase    = switchPhase;
 window.addToCalendar  = addToCalendar;
 window.addAllToCalendar = addAllToCalendar;
 window.addFollowUpReminder = addFollowUpReminder;
+
+window.completePhase = async function(matterId, phase) {
+  const names = ATTORNEYS.map(a => a.name);
+  const nameList = names.map((n, i) => (i+1) + '. ' + n).join('
+');
+  const input = prompt('Select your name by entering the number:
+' + nameList);
+  if (!input) return;
+  const idx = parseInt(input) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= names.length) {
+    toast('Invalid selection', true);
+    return;
+  }
+  const personName = names[idx];
+  const completedDate = new Date().toISOString();
+  const updateData = {};
+  if (phase === 1) {
+    updateData.phase1CompletedBy = personName;
+    updateData.phase1CompletedDate = completedDate;
+  } else {
+    updateData.phase2CompletedBy = personName;
+    updateData.phase2CompletedDate = completedDate;
+  }
+  try {
+    await updateDoc(doc(db, 'matters', matterId), updateData);
+    toast('Phase ' + phase + ' marked complete by ' + personName);
+  } catch(e) { toast('Error saving', true); }
+}
 
 window.concludeMatter = async function(matterId) {
   const m = matters[matterId];
