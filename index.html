@@ -535,21 +535,15 @@ function renderUrgentMatters() {
     const urgencyBg    = daysUntilHearing === null ? '#E7E5E4' : daysUntilHearing <= 3 ? '#FEE2E2' : daysUntilHearing <= 7 ? '#FEF3C7' : '#DCFCE7';
 
     const checklistItems = URGENT_CHECKLIST.map(function(item) {
-      const checked = m.checked && m.checked[item.id];
-      return '<div class="checklist-item ' + (checked?'completed':'') + '">' +
-        '<div class="check-box ' + (checked?'checked':'') + '" onclick="toggleCheck('' + m.id + '','' + item.id + '')">' +
-        (checked ? '<span class="check-mark">[check]</span>' : '') +
-        '</div>' +
-        '<div class="item-label ' + (checked?'done':'') + '">' + item.label + '</div>' +
-        '</div>';
+      const chk = m.checked && m.checked[item.id];
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'checklist-item' + (chk ? ' completed' : '');
+      itemDiv.innerHTML = '<div class="check-box ' + (chk?'checked':'') + '" onclick="toggleCheck(\'' + m.id + '\',\'' + item.id + '\')">' + (chk?'<span class="check-mark">&#10003;</span>':'') + '</div><div class="item-label ' + (chk?'done':'') + '">' + item.label + '</div>';
+      return itemDiv.outerHTML;
     }).join('');
 
-    const directiveItem = '<div class="checklist-item" style="background:' + (directiveDone?'#DCFCE7':'#FEF3C7') + ';border-left:3px solid ' + (directiveDone?'#166534':'#B45309') + ';">' +
-      '<div class="check-box ' + (directiveDone?'checked':'') + '" style="border-color:' + (directiveDone?'#166534':'#B45309') + ';" onclick="toggleCheck('' + m.id + '','' + URGENT_DIRECTIVE.id + '')">' +
-      (directiveDone ? '<span class="check-mark">[check]</span>' : '') +
-      '</div>' +
-      '<div><div class="item-label ' + (directiveDone?'done':'') + '" style="font-weight:500;">' + URGENT_DIRECTIVE.label + '</div></div>' +
-      '</div>';
+    const dirChk = m.checked && m.checked[URGENT_DIRECTIVE.id];
+    const directiveItem = '<div class="checklist-item" style="background:' + (dirChk?'#DCFCE7':'#FEF3C7') + ';border-left:3px solid ' + (dirChk?'#166534':'#B45309') + '"><div class="check-box ' + (dirChk?'checked':'') + '" style="border-color:' + (dirChk?'#166534':'#B45309') + '" onclick="toggleCheck(\'' + m.id + '\',\'' + URGENT_DIRECTIVE.id + '\')">' + (dirChk?'<span class="check-mark">&#10003;</span>':'') + '</div><div><div class="item-label ' + (dirChk?'done':'') + '" style="font-weight:500">' + URGENT_DIRECTIVE.label + '</div></div></div>';
 
     const completedBanner = m.urgentCompletedBy ? '<div style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.75rem 1.5rem;margin-top:1rem;font-size:13px;font-weight:500;color:#166534;">Enrolment completed by ' + m.urgentCompletedBy + ' on ' + formatDate(m.urgentCompletedDate) + '</div>' : '';
 
