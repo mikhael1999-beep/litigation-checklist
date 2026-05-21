@@ -550,22 +550,24 @@ function renderUrgentMatters() {
       const urgBg    = daysLeft === null ? '#E7E5E4' : daysLeft <= 3 ? '#FEE2E2' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7';
       const attyName = ATTORNEYS.find(function(a) { return a.email === m.atty; }) ? ATTORNEYS.find(function(a) { return a.email === m.atty; }).name : m.atty;
       const pct = Math.round(done / URGENT_CHECKLIST.length * 100);
-      return '<div class="checklist-item" onclick="openUrgentMatter('' + m.id + '')" style="cursor:pointer;">' +
+      const li = document.createElement('div');
+      li.className = 'checklist-item';
+      li.style.cssText = 'cursor:pointer;';
+      li.setAttribute('onclick', 'openUrgentMatter("' + m.id + '")');
+      li.innerHTML =
         '<div style="flex:1;">' +
           '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + m.name + '</div>' +
           '<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">' + m.caseNo + ' . ' + attyName + '</div>' +
           '<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">Hearing: ' + (m.urgentDate ? formatDate(m.urgentDate) : 'Not set') + ' . Closes: ' + (thursday ? formatDate(thursday) + ' 12:00' : '-') + '</div>' +
           '<div style="margin-top:6px;height:4px;background:var(--paper-3);border-radius:2px;width:200px;max-width:100%;">' +
-            '<div style="height:100%;background:' + (pct === 100 ? '#166534' : '#B45309') + ';border-radius:2px;width:' + pct + '%;transition:width 0.3s;"></div>' +
+            '<div style="height:100%;background:' + (pct === 100 ? '#166534' : '#B45309') + ';border-radius:2px;width:' + pct + '%;"></div>' +
           '</div>' +
         '</div>' +
         '<div style="text-align:right;flex-shrink:0;">' +
-          '<div style="font-size:13px;font-weight:600;color:' + urgColor + ';background:' + urgBg + ';padding:4px 10px;border-radius:6px;">' +
-            (daysLeft === null ? 'Heard' : daysLeft + ' court days') +
-          '</div>' +
+          '<div style="font-size:13px;font-weight:600;color:' + urgColor + ';background:' + urgBg + ';padding:4px 10px;border-radius:6px;">' + (daysLeft === null ? 'Heard' : daysLeft + ' court days') + '</div>' +
           '<div style="font-size:11px;color:var(--ink-3);margin-top:4px;">' + done + '/' + URGENT_CHECKLIST.length + ' items</div>' +
-        '</div>' +
-      '</div>';
+        '</div>';
+      return li.outerHTML
     }).join('') +
     '</div>';
 }
