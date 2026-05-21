@@ -553,7 +553,8 @@ function renderUrgentMatters() {
       const li = document.createElement('div');
       li.className = 'checklist-item';
       li.style.cssText = 'cursor:pointer;';
-      li.setAttribute('onclick', 'openUrgentMatter("' + m.id + '")');
+      li.dataset.id = m.id;
+      li.addEventListener('click', function() { openUrgentMatter(this.dataset.id); });
       li.innerHTML =
         '<div style="flex:1;">' +
           '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + m.name + '</div>' +
