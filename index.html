@@ -465,6 +465,18 @@ function renderSidebar() {
         </div>
       </div>`;
     }
+    // Handle urgent matters differently
+    if (m.type === 'urgent') {
+      const urgDone = URGENT_CHECKLIST.filter(i => m.checked && m.checked[i.id]).length;
+      const total = URGENT_CHECKLIST.length;
+      return `<div class="matter-item ${currentMatterId === m.id ? 'active' : ''}" data-id="${m.id}" onclick="showUrgentMatters()">
+        <div class="matter-title">${m.name}</div>
+        <div class="matter-meta">${m.caseNo} . ${urgDone}/${total} done</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
+          <span class="matter-badge" style="background:rgba(153,27,27,0.3);color:#FCA5A5;">Urgent</span>
+        </div>
+      </div>`;
+    }
     const phase = m.dateAllocated ? 2 : 1;
     const cl = CHECKLISTS[m.type];
     const items = phase === 1 ? cl.phase1.items : cl.phase2.items;
@@ -705,6 +717,7 @@ function renderDashboard() {
         <span class="progress-pill">${all.length} matter${all.length!==1?'s':''}</span>
       </div>
       ${all.map(m => {
+        if (m.type === 'urgent') return '';
         const phase = m.dateAllocated ? 2 : 1;
         const cl = CHECKLISTS[m.type];
         const items = phase === 1 ? cl.phase1.items : cl.phase2.items;
