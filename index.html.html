@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Litigation Checklist - Albert Hibbert Attorneys</title>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBULXDm2FSGOmf37ziKqbKZXfdUuSrTvTE",
+  authDomain: "aha-litigation.firebaseapp.com",
+  projectId: "aha-litigation",
+  storageBucket: "aha-litigation.firebasestorage.app",
+  messagingSenderId: "313716584273",
+  appId: "1:313716584273:web:b83f0259b1cdcad22f2d70"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ============================================================
+// CHECKLIST DEFINITIONS
+// ============================================================
+const CHECKLISTS = {
+  unopposed: {
+    phase1: {
+      title: "Date Application",
+      items: [
+        { id: "u1_1", label: "Blank notice of set down prepared" },
+        { id: "u1_2", label: "Directive compliance certificate prepared" },
+        { id: "u1_3", label: "Return of sheriff filed" },
+        { id: "u1_4", label: "Date application form completed and submitted to CourtOnline", note: "Record the date applied once submitted" },
+      ]
+    },
+    phase2: {
+      title: "Final Enrolment",
+      items: [
+        { id: "u2_1", label: "Compliance statement prepared and uploaded" },
+        { id: "u2_2", label: "Documents moved from CourtOnline to CaseLines" },
+        { id: "u2_3", label: "CaseLines sections made compliant" },
+        { id: "u2_4", label: "Notice of final enrolment prepared with proof of service" },
+        { id: "u2_5", label: "Compliant practice note uploaded to CaseLines", note: "Deadline: 5 court days before set down week" },
+        { id: "u2_6", label: "Updated practice note with Judge name and court number uploaded" },
+        { id: "u2_7", label: "Draft order of court uploaded" },
+        { id: "u2_8", label: "Short heads of argument filed (if applicable)", note: "Optional - if directed" },
+      ],
+      deadlines: [
+        { label: "Begin final enrolment", courtDays: -15 },
+        { label: "Final enrolment deadline (noon)", courtDays: -7 },
+        { label: "Updated practice note deadline", courtDays: -5 },
+      ]
+    }
+  },
+  opposed: {
+    phase1: {
+      title: "Date Application",
+      items: [
+        { id: "o1_1", label: "Applicant heads of argument filed", note: "Within 15 days of replying affidavit" },
+        { id: "o1_2", label: "Respondent heads of argument filed", note: "Within 10 days of applicant heads" },
+        { id: "o1_3", label: "List of authorities prepared" },
+        { id: "o1_4", label: "Chronology table prepared" },
+        { id: "o1_5", label: "Blank notice of set down prepared" },
+        { id: "o1_6", label: "Practice note prepared" },
+        { id: "o1_7", label: "Directive compliance certificate prepared" },
+        { id: "o1_8", label: "Date application submitted to CourtOnline", note: "Record the date applied once submitted" },
+      ]
+    },
+    phase2: {
+      title: "Final Enrolment",
+      items: [
+        { id: "o2_1", label: "Documents moved from CourtOnline to CaseLines" },
+        { id: "o2_2", label: "CaseLines sections made compliant" },
+        { id: "o2_3", label: "Joint practice note OR unilateral practice note prepared" },
+        { id: "o2_4", label: "Joint/unilateral practice note uploaded to CaseLines" },
+        { id: "o2_5", label: "Practice note emailed to senior Judge", note: "Deadline: 12 court days before set down week" },
+        { id: "o2_6", label: "Draft order uploaded" },
+      ],
+      deadlines: [
+        { label: "Final enrolment deadline (noon)", courtDays: -20 },
+        { label: "Practice note to senior Judge", courtDays: -12 },
+      ]
+    }
+  },
+  default: {
+    phase1: {
+      title: "Date Application",
+      items: [
+        { id: "d1_1", label: "Return of sheriff filed" },
+        { id: "d1_2", label: "Application for default judgment prepared (Rule 31(5))" },
+        { id: "d1_3", label: "Draft order prepared" },
+        { id: "d1_4", label: "Compliance statement prepared" },
+        { id: "d1_5", label: "Documents uploaded to CourtOnline in separate sections" },
+        { id: "d1_6", label: "Date application submitted to CourtOnline", note: "Record the date applied once submitted" },
+      ]
+    },
+    phase2: {
+      title: "Registrar Decision",
+      items: [
+        { id: "d2_1", label: "Documents moved from CourtOnline to CaseLines" },
+        { id: "d2_2", label: "CaseLines sections made compliant" },
+        { id: "d2_3", label: "Application reviewed - registrar decides" },
+        { id: "d2_4", label: "Draft order confirmed and uploaded" },
+        { id: "d2_5", label: "Compliance statement confirmed" },
+      ],
+      deadlines: [
+        { label: "Final enrolment deadline", courtDays: -7 },
+      ]
+    }
+  }
+};
+
+const TYPE_LABELS = {
+  unopposed: "Unopposed Motion",
+  opposed:   "Opposed Motion",
+  default:   "Default Judgment",
+  urgent:    "Urgent Matter"
+};
+
+const URGENT_CHECKLIST = [
+  { id: "urg_1", label: "Date confirmed and captured" },
+  { id: "urg_2", label: "Proof of service / return of service filed" },
+  { id: "urg_3", label: "Service affidavit filed" },
+  { id: "urg_4", label: "Draft order uploaded" },
+  { id: "urg_5", label: "Practice note uploaded" },
+  { id: "urg_6", label: "Heads of argument filed" },
+];
+
+const URGENT_DIRECTIVE = {
+  id: "urg_directive",
+  label: "I confirm that I have read and considered the directive issued by the Judge hearing this urgent matter and I am satisfied that all requirements have been met."
+};
+
+const ATTORNEYS = [
+  { name: "Jaco du Plooy",       email: "jaco@hibbertlaw.co.za" },
+  { name: "Mikhael Venter",      email: "aha3@hibbertlaw.co.za" },
+  { name: "Westine van Tonder",  email: "aha4@hibbertlaw.co.za" },
+  { name: "Liezel Coetzee",      email: "aha5@hibbertlaw.co.za" },
+  { name: "Clarissa Viljoen",    email: "aha6@hibbertlaw.co.za" },
+  { name: "Charne Liebenberg",   email: "aha7@hibbertlaw.co.za" },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let matters = {};
+let currentMatterId = null;
+let currentPhase = 1;
+let unsubscribe = null;
+
+// ============================================================
+// URGENT MATTER HELPERS
+// ============================================================
+function getPrevThursday(hearingDate) {
+  // Get the Thursday of the week BEFORE the hearing week
+  const d = new Date(hearingDate);
+  // Go back to previous week's Thursday
+  const day = d.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  // Days to subtract to get to Tuesday = hearing day (2)
+  // Then go back to previous Thursday (4)
+  // From Tuesday: go back 5 days to previous Thursday
+  const daysBack = day === 2 ? 5 : day === 3 ? 6 : day === 4 ? 7 : day === 5 ? 8 : day === 6 ? 9 : day === 0 ? 3 : day === 1 ? 4 : 5;
+  const thursday = new Date(d);
+  thursday.setDate(d.getDate() - daysBack);
+  return thursday;
+}
+
+function getMonday(thursdayDate) {
+  // Get Monday of the same week as the Thursday
+  const d = new Date(thursdayDate);
+  const day = d.getDay();
+  const daysBack = day === 1 ? 0 : day === 2 ? 1 : day === 3 ? 2 : day === 4 ? 3 : day === 5 ? 4 : day === 6 ? 5 : 6;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - daysBack);
+  return monday;
+}
+
+function addUrgentCalendarReminders(matterId) {
+  const m = matters[matterId];
+  if (!m || !m.urgentDate) return;
+
+  const thursday = getPrevThursday(new Date(m.urgentDate));
+  const monday   = getMonday(thursday);
+
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+  const toYMD = function(d) {
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  };
+  const to = ATTORNEYS.map(function(a){return a.email;}).join(';');
+
+  // Monday reminder
+  const monSubject = '[URGENT REMINDER] Closes Thursday 12:00 - ' + m.name;
+  const monBody    = 'Reminder: Urgent matter closes this Thursday at 12:00. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Hearing date: ' + formatDate(m.urgentDate) + '. Closing deadline: Thursday ' + formatDate(thursday) + ' at 12:00. All documents must be filed before then.';
+  const monStart   = toYMD(monday) + 'T08:00:00';
+  const monEnd     = toYMD(monday) + 'T08:30:00';
+  const monUrl     = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(monSubject) + '&startdt=' + monStart + '&enddt=' + monEnd + '&body=' + encodeURIComponent(monBody) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+
+  // Thursday reminder
+  const thuSubject = '[URGENT DEADLINE] Closes TODAY at 12:00 - ' + m.name;
+  const thuBody    = 'URGENT MATTER CLOSES TODAY AT 12:00. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Hearing date: ' + formatDate(m.urgentDate) + '. All documents must be filed by 12:00 today.';
+  const thuStart   = toYMD(thursday) + 'T08:00:00';
+  const thuEnd     = toYMD(thursday) + 'T08:30:00';
+  const thuUrl     = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(thuSubject) + '&startdt=' + thuStart + '&enddt=' + thuEnd + '&body=' + encodeURIComponent(thuBody) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+
+  // Hearing date
+  const hearSubject = '[URGENT HEARING] ' + m.name + ' (' + m.caseNo + ')';
+  const hearBody    = 'Urgent court hearing. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Albert Hibbert Attorneys Inc.';
+  const hearStart   = toYMD(new Date(m.urgentDate)) + 'T09:00:00';
+  const hearEnd     = toYMD(new Date(m.urgentDate)) + 'T17:00:00';
+  const hearUrl     = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(hearSubject) + '&startdt=' + hearStart + '&enddt=' + hearEnd + '&body=' + encodeURIComponent(hearBody) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+
+  // Open all three with delays
+  window.open(monUrl, '_blank');
+  setTimeout(function(){ window.open(thuUrl, '_blank'); }, 800);
+  setTimeout(function(){ window.open(hearUrl, '_blank'); }, 1600);
+  toast('3 Outlook reminders created - Monday, Thursday close, and hearing date');
+}
+
+// ============================================================
+// FIREBASE LISTENERS
+// ============================================================
+function startListening() {
+  if (unsubscribe) unsubscribe();
+  unsubscribe = onSnapshot(collection(db, 'matters'), (snapshot) => {
+    matters = {};
+    snapshot.forEach(doc => {
+      matters[doc.id] = { id: doc.id, ...doc.data() };
+    });
+    renderSidebar();
+    if (currentMatterId && matters[currentMatterId]) {
+      renderMatter(matters[currentMatterId]);
+    } else if (!currentMatterId) {
+      renderDashboard();
+    }
+    updateStats();
+  });
+}
+
+async function saveMatter(matter) {
+  try {
+    await setDoc(doc(db, 'matters', matter.id), matter);
+  } catch(e) {
+    toast('Error saving: ' + e.message, true);
+  }
+}
+
+async function toggleCheck(matterId, itemId) {
+  const m = matters[matterId];
+  if (!m) return;
+  const newChecked = { ...m.checked, [itemId]: !m.checked[itemId] };
+  try {
+    await updateDoc(doc(db, 'matters', matterId), { checked: newChecked });
+  } catch(e) {
+    toast('Error saving', true);
+  }
+}
+
+async function setDateApplied(matterId, val) {
+  try {
+    await updateDoc(doc(db, 'matters', matterId), { dateApplied: val || null });
+  } catch(e) { toast('Error saving', true); }
+}
+
+async function setDateAllocated(matterId, val) {
+  try {
+    await updateDoc(doc(db, 'matters', matterId), { dateAllocated: val || null });
+    if (val) {
+      currentPhase = 2;
+      toast('Date allocated - matter moved to Phase 2');
+      // Automatically open Outlook to add hearing date to all calendars
+      const m = matters[matterId] || {};
+      const matterName = m.name || 'Matter';
+      const caseNo = m.caseNo || '';
+      const type = TYPE_LABELS[m.type] || '';
+      const subject = '[HEARING DATE] ' + matterName + ' (' + caseNo + ')';
+      const body = 'Court hearing date for ' + type + '. Matter: ' + matterName + '. Case: ' + caseNo + '. Date: ' + formatDate(val) + '. Albert Hibbert Attorneys Inc.';
+      const dh = new Date(val);
+      const padH = function(n) { return String(n).padStart(2,'0'); };
+      const ymdH = dh.getFullYear() + '-' + padH(dh.getMonth()+1) + '-' + padH(dh.getDate());
+      const startDt = ymdH + 'T09:00:00';
+      const endDt   = ymdH + 'T17:00:00';
+      const toH = ATTORNEYS.map(function(a){return a.email;}).join(';');
+      const url = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startDt + '&enddt=' + endDt + '&body=' + encodeURIComponent(body) + '&to=' + encodeURIComponent(toH) + '&path=%2Fcalendar%2Faction%2Fcompose';
+      setTimeout(() => window.open(url, '_blank'), 800);
+    }
+  } catch(e) { toast('Error saving', true); }
+}
+
+// ============================================================
+// MATTER CREATION
+// ============================================================
+function openNewMatter() {
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  setTimeout(function() { document.getElementById('m-name').focus(); }, 100);
+}
+
+window.onMatterTypeChange = function() {
+  const type = document.getElementById('m-type').value;
+  const urgentField = document.getElementById('urgent-date-field');
+  const appliedField = document.getElementById('m-date-applied').closest ? document.getElementById('m-date-applied').parentElement : null;
+  if (type === 'urgent') {
+    urgentField.style.display = 'block';
+  } else {
+    urgentField.style.display = 'none';
+  }
+};
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+
+async function createMatter() {
+  const name    = document.getElementById('m-name').value.trim();
+  const caseNo  = document.getElementById('m-case').value.trim();
+  const type    = document.getElementById('m-type').value;
+  const atty    = document.getElementById('m-attorney').value;
+  const ghost   = document.getElementById('m-ghost').value.trim();
+  const applied = document.getElementById('m-date-applied').value;
+
+  if (!name || !caseNo) { toast('Please enter matter name and case number', true); return; }
+
+  const id = Date.now().toString();
+  const urgentDate = document.getElementById('m-urgent-date').value;
+  let checked = {};
+
+  if (type === 'urgent') {
+    URGENT_CHECKLIST.forEach(i => { checked[i.id] = false; });
+    checked[URGENT_DIRECTIVE.id] = false;
+  } else {
+    const cl = CHECKLISTS[type];
+    [...cl.phase1.items, ...cl.phase2.items].forEach(i => { checked[i.id] = false; });
+  }
+
+  const matter = {
+    id, name, caseNo, type, atty, ghost,
+    dateApplied: type !== 'urgent' ? (applied || null) : null,
+    dateAllocated: null,
+    urgentDate: type === 'urgent' ? (urgentDate || null) : null,
+    created: new Date().toISOString(),
+    checked,
+  };
+
+  await saveMatter(matter);
+  closeModal();
+  currentMatterId = id;
+  currentPhase = 1;
+  toast('Matter created - ' + name);
+
+  // Clear form
+  ['m-name','m-case','m-ghost'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('m-date-applied').value = '';
+}
+
+// ============================================================
+// COURT DAY CALCULATOR
+// ============================================================
+function addCourtDays(date, days) {
+  let d = new Date(date);
+  let added = 0;
+  const step = days > 0 ? 1 : -1;
+  while (added < Math.abs(days)) {
+    d.setDate(d.getDate() + step);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return d;
+}
+
+function courtDaysUntil(date) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(date); target.setHours(0,0,0,0);
+  if (target < today) return null;
+  let count = 0;
+  let d = new Date(today);
+  while (d < target) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+  }
+  return count;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('en-ZA', { day:'numeric', month:'long', year:'numeric' });
+}
+
+function calendarDaysSince(dateStr) {
+  if (!dateStr) return 0;
+  return Math.floor((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24));
+}
+
+// ============================================================
+// OUTLOOK
+// ============================================================
+function addToCalendar(matterId, deadlineLabel, deadlineDate) {
+  const m = matters[matterId];
+  const subject = '[DEADLINE] ' + deadlineLabel + ' - ' + m.name + ' (' + m.caseNo + ')';
+  const body = 'Litigation deadline: ' + deadlineLabel + '. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Albert Hibbert Attorneys Inc.';
+  const d = new Date(deadlineDate);
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+  // Outlook Web requires dates without encoding and in this exact format
+  const ymd = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  const startdt = ymd + 'T09:00:00';
+  const enddt   = ymd + 'T10:00:00';
+  const to = ATTORNEYS.map(function(a){return a.email;}).join(';');
+  const url = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startdt + '&enddt=' + enddt + '&body=' + encodeURIComponent(body) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+  window.open(url, '_blank');
+  toast('Opening Outlook calendar...');
+}
+
+function addAllToCalendar(matterId) {
+  const m = matters[matterId];
+  if (!m || !m.dateAllocated) return;
+  const deadlines = CHECKLISTS[m.type].phase2.deadlines || [];
+  deadlines.forEach((d, i) => {
+    setTimeout(() => {
+      const dd = addCourtDays(new Date(m.dateAllocated), d.courtDays);
+      addToCalendar(matterId, d.label, dd);
+    }, i * 600);
+  });
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function updateStats() {
+  const all = Object.values(matters);
+  const active  = all.filter(m => m.status !== 'concluded' && m.type !== 'urgent');
+  const urgentActive = all.filter(m => m.status !== 'concluded' && m.type === 'urgent');
+  document.getElementById('stat-total').textContent = active.length;
+  document.getElementById('stat-p1').textContent = active.filter(m => !m.dateAllocated).length;
+  document.getElementById('stat-p2').textContent = active.filter(m => m.dateAllocated).length;
+  const fu = active.filter(m => m.dateApplied && calendarDaysSince(m.dateApplied) > 20 && !m.dateAllocated).length;
+  const el = document.getElementById('stat-fu');
+  el.textContent = fu;
+  el.style.color = fu > 0 ? '#FCA5A5' : '#86EFAC';
+  // Update urgent badge
+  const badge = document.getElementById('urgent-count-badge');
+  if (badge) {
+    badge.textContent = urgentActive.length;
+    badge.style.display = urgentActive.length > 0 ? 'inline-block' : 'none';
+  }
+}
+
+function renderSidebar() {
+  const list = document.getElementById('matter-list');
+  const all = Object.values(matters).sort((a,b) => b.created > a.created ? 1 : -1);
+  const active = all.filter(m => m.status !== 'concluded');
+  const concluded = all.filter(m => m.status === 'concluded');
+
+  if (!all.length) {
+    list.innerHTML = '<div style="padding:0.75rem 1.5rem;font-size:12px;color:rgba(255,255,255,0.25);">No matters yet</div>';
+    return;
+  }
+
+  const matterHtml = (m, isConcluded) => {
+    if (isConcluded) {
+      return `<div class="matter-item" data-id="${m.id}" style="opacity:0.5;">
+        <div class="matter-title" style="text-decoration:line-through;">${m.name}</div>
+        <div class="matter-meta">${m.caseNo} . Concluded</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
+          <span class="matter-badge" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);">Concluded</span>
+          <button onclick="restoreMatter('${m.id}')" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:10px;cursor:pointer;padding:0;font-family:inherit;">Restore</button>
+        </div>
+      </div>`;
+    }
+    const phase = m.dateAllocated ? 2 : 1;
+    const cl = CHECKLISTS[m.type];
+    const items = phase === 1 ? cl.phase1.items : cl.phase2.items;
+    const done  = items.filter(i => m.checked && m.checked[i.id]).length;
+    const needsFollowup = m.dateApplied && calendarDaysSince(m.dateApplied) > 20 && !m.dateAllocated;
+    return `<div class="matter-item ${currentMatterId === m.id ? 'active' : ''}" data-id="${m.id}" onclick="openMatter('${m.id}')">
+      <div class="matter-title">${m.name}</div>
+      <div class="matter-meta">${m.caseNo} . ${done}/${items.length} done</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
+        <span class="matter-badge badge-${m.type}">${TYPE_LABELS[m.type]}</span>
+        <span class="matter-badge badge-phase${phase}">Phase ${phase}</span>
+        ${needsFollowup ? '<span class="matter-badge" style="background:rgba(153,27,27,0.3);color:#FCA5A5;">Follow-up</span>' : ''}
+      </div>
+    </div>`;
+  };
+
+  list.innerHTML = active.map(m => matterHtml(m, false)).join('') +
+    (concluded.length ? `
+      <div style="padding:0.75rem 1.5rem 0.25rem;font-size:10px;font-weight:600;color:rgba(255,255,255,0.2);letter-spacing:0.1em;text-transform:uppercase;margin-top:0.5rem;border-top:1px solid rgba(255,255,255,0.07);">
+        Concluded (${concluded.length})
+      </div>
+      ${concluded.map(m => matterHtml(m, true)).join('')}` : '');
+}
+
+function openMatter(id) {
+  currentMatterId = id;
+  currentPhase = matters[id]?.dateAllocated ? 2 : 1;
+  document.querySelectorAll('.matter-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+  const m = matters[id];
+  if (!m) return;
+  document.getElementById('page-title').textContent = m.name;
+  document.getElementById('page-sub').textContent = TYPE_LABELS[m.type] + ' . ' + m.caseNo;
+  renderMatter(m);
+}
+
+function showUrgentMatters() {
+  currentMatterId = null;
+  document.querySelectorAll('.matter-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.sidebar-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('urgent-sidebar-btn').classList.add('active');
+  document.getElementById('page-title').textContent = 'Urgent Matters';
+  document.getElementById('page-sub').textContent = 'Urgent applications and closing deadlines';
+  renderUrgentMatters();
+}
+
+function renderUrgentMatters() {
+  const urgentMatters = Object.values(matters).filter(m => m.type === 'urgent' && m.status !== 'concluded');
+  const mainContent = document.getElementById('main-content');
+
+  if (!urgentMatters.length) {
+    mainContent.innerHTML = '<div class="empty-state"><div class="empty-icon" style="font-size:32px;color:#991B1B;">!</div><div class="empty-title">No urgent matters</div><div class="empty-sub">Create an urgent matter using the + New matter button.</div><button class="btn btn-primary" onclick="openNewMatter()">+ New urgent matter</button></div>';
+    return;
+  }
+
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+
+  mainContent.innerHTML = urgentMatters.sort(function(a,b) {
+    return new Date(a.urgentDate || 0) - new Date(b.urgentDate || 0);
+  }).map(function(m) {
+    const thursday   = m.urgentDate ? getPrevThursday(new Date(m.urgentDate)) : null;
+    const monday     = thursday ? getMonday(thursday) : null;
+    const daysUntilHearing = m.urgentDate ? courtDaysUntil(m.urgentDate) : null;
+    const done = URGENT_CHECKLIST.filter(i => m.checked && m.checked[i.id]).length;
+    const directiveDone = m.checked && m.checked[URGENT_DIRECTIVE.id];
+    const attyName = ATTORNEYS.find(function(a){return a.email===m.atty;}) ? ATTORNEYS.find(function(a){return a.email===m.atty;}).name : m.atty;
+
+    const urgencyColor = daysUntilHearing === null ? '#78716C' : daysUntilHearing <= 3 ? '#991B1B' : daysUntilHearing <= 7 ? '#92400E' : '#166534';
+    const urgencyBg    = daysUntilHearing === null ? '#E7E5E4' : daysUntilHearing <= 3 ? '#FEE2E2' : daysUntilHearing <= 7 ? '#FEF3C7' : '#DCFCE7';
+
+    const checklistItems = URGENT_CHECKLIST.map(function(item) {
+      const chk = m.checked && m.checked[item.id];
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'checklist-item' + (chk ? ' completed' : '');
+      itemDiv.innerHTML = '<div class="check-box ' + (chk?'checked':'') + '" onclick="toggleCheck(\'' + m.id + '\',\'' + item.id + '\')">' + (chk?'<span class="check-mark">&#10003;</span>':'') + '</div><div class="item-label ' + (chk?'done':'') + '">' + item.label + '</div>';
+      return itemDiv.outerHTML;
+    }).join('');
+
+    const dirChk = m.checked && m.checked[URGENT_DIRECTIVE.id];
+    const directiveItem = '<div class="checklist-item" style="background:' + (dirChk?'#DCFCE7':'#FEF3C7') + ';border-left:3px solid ' + (dirChk?'#166534':'#B45309') + '"><div class="check-box ' + (dirChk?'checked':'') + '" style="border-color:' + (dirChk?'#166534':'#B45309') + '" onclick="toggleCheck(\'' + m.id + '\',\'' + URGENT_DIRECTIVE.id + '\')">' + (dirChk?'<span class="check-mark">&#10003;</span>':'') + '</div><div><div class="item-label ' + (dirChk?'done':'') + '" style="font-weight:500">' + URGENT_DIRECTIVE.label + '</div></div></div>';
+
+    const completedBanner = m.urgentCompletedBy ? '<div style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.75rem 1.5rem;margin-top:1rem;font-size:13px;font-weight:500;color:#166534;">Enrolment completed by ' + m.urgentCompletedBy + ' on ' + formatDate(m.urgentCompletedDate) + '</div>' : '';
+
+    return '<div class="checklist-card" style="margin-bottom:1.5rem;">' +
+      '<div class="checklist-card-header" style="background:var(--paper-2);">' +
+        '<div style="flex:1;">' +
+          '<div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#991B1B;margin-bottom:3px;">Urgent Matter</div>' +
+          '<div style="font-size:15px;font-weight:600;color:var(--ink);">' + m.name + '</div>' +
+          '<div style="font-size:12px;color:var(--ink-3);margin-top:2px;">' + m.caseNo + ' . ' + attyName + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;flex-shrink:0;">' +
+          '<div style="font-size:13px;font-weight:600;color:' + urgencyColor + ';background:' + urgencyBg + ';padding:4px 10px;border-radius:6px;">' +
+            (daysUntilHearing === null ? 'Heard' : daysUntilHearing + ' court days') +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--border);">' +
+        '<div style="padding:10px 1.5rem;border-right:1px solid var(--border);">' +
+          '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Hearing date</div>' +
+          '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + (m.urgentDate ? formatDate(m.urgentDate) : 'Not set') + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 1.5rem;border-right:1px solid var(--border);">' +
+          '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Closes Thursday</div>' +
+          '<div style="font-size:13px;font-weight:500;color:#991B1B;">' + (thursday ? formatDate(thursday) + ' at 12:00' : '-') + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 1.5rem;">' +
+          '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Progress</div>' +
+          '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + done + '/' + URGENT_CHECKLIST.length + ' items' + (directiveDone?' + directive':' - directive pending') + '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="outlook-btn" style="background:#1E3A5F;" onclick="addUrgentCalendarReminders('' + m.id + '')">Cal Add all reminders to Outlook</button>' +
+        '<button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;margin-left:auto;" onclick="concludeMatter('' + m.id + '')">Conclude</button>' +
+        '<button class="btn btn-sm" style="color:#999;border-color:#e0e0e0;font-size:11px;" onclick="deleteMatter('' + m.id + '')">Delete</button>' +
+      '</div>' +
+
+      checklistItems +
+      directiveItem +
+
+      (!m.urgentCompletedBy ? '<div style="padding:12px 1.5rem;border-top:1px solid var(--border);background:var(--paper-2);">' +
+        '<button class="btn btn-sm" style="background:#166534;color:white;border-color:#166534;width:100%;justify-content:center;" onclick="completeUrgentMatter('' + m.id + '')">' +
+        'Mark urgent matter enrolment complete' +
+        '</button>' +
+        '</div>' : '') +
+
+      completedBanner +
+      '</div>';
+  }).join('');
+}
+
+function showDashboard() {
+  currentMatterId = null;
+  document.querySelectorAll('.matter-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-title').textContent = 'Dashboard';
+  document.getElementById('page-sub').textContent = 'Litigation matter tracking';
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const all = Object.values(matters).sort((a,b) => b.created > a.created ? 1 : -1).filter(m => m.status !== 'concluded');
+  const mainContent = document.getElementById('main-content');
+
+  if (!all.length) {
+    mainContent.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">[Law]</div>
+        <div class="empty-title">No matters yet</div>
+        <div class="empty-sub">Create your first litigation matter to start tracking checklist progress and deadlines.</div>
+        <button class="btn btn-primary" onclick="openNewMatter()">+ Create first matter</button>
+      </div>`;
+    return;
+  }
+
+  // Age analysis data
+  const awaitingDate = all.filter(m => m.dateApplied && !m.dateAllocated);
+  const withDate     = all.filter(m => m.dateAllocated);
+  const notApplied   = all.filter(m => !m.dateApplied && !m.dateAllocated);
+
+  // Bucket awaitingDate by days since applied
+  const bucket = (days) => {
+    if (days <= 7)  return { label: '0-7 days', color: '#166534', bg: '#DCFCE7', cls: 'ok' };
+    if (days <= 14) return { label: '8-14 days', color: '#92400E', bg: '#FEF3C7', cls: 'soon' };
+    if (days <= 20) return { label: '15-20 days', color: '#B45309', bg: '#FEF3C7', cls: 'soon' };
+    return { label: '21+ days (overdue)', color: '#991B1B', bg: '#FEE2E2', cls: 'urgent' };
+  };
+
+  const urgencyBucket = (courtDays) => {
+    if (courtDays === null) return { label: 'Past', color: '#78716C', bg: '#E7E5E4' };
+    if (courtDays <= 7)  return { label: courtDays + ' court days', color: '#991B1B', bg: '#FEE2E2' };
+    if (courtDays <= 20) return { label: courtDays + ' court days', color: '#92400E', bg: '#FEF3C7' };
+    return { label: courtDays + ' court days', color: '#166534', bg: '#DCFCE7' };
+  };
+
+  // Age analysis HTML
+  const ageAnalysisHtml = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+
+      <!-- Awaiting date allocation -->
+      <div class="checklist-card" style="margin-bottom:0;">
+        <div class="checklist-card-header">
+          <div class="checklist-card-title">Awaiting date allocation</div>
+          <span class="progress-pill">${awaitingDate.length} matter${awaitingDate.length!==1?'s':''}</span>
+        </div>
+        ${!awaitingDate.length ? '<div style="padding:1rem 1.5rem;font-size:13px;color:var(--ink-3);">None pending</div>' :
+          awaitingDate.sort((a,b) => calendarDaysSince(b.dateApplied) - calendarDaysSince(a.dateApplied)).map(m => {
+            const days = calendarDaysSince(m.dateApplied);
+            const b = bucket(days);
+            return `<div class="checklist-item" onclick="openMatter('${m.id}')" style="cursor:pointer;">
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;">${m.name}</div>
+                <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">${m.caseNo} . ${TYPE_LABELS[m.type]}</div>
+                <div style="font-size:11px;margin-top:4px;">Applied: ${formatDate(m.dateApplied)}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:13px;font-weight:600;color:${b.color};">${days} days</div>
+                <div style="font-size:10px;padding:2px 6px;border-radius:4px;background:${b.bg};color:${b.color};margin-top:3px;">${b.label}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        ${notApplied.length ? `<div style="padding:8px 1.5rem;font-size:12px;color:var(--ink-3);border-top:1px solid var(--border);">+ ${notApplied.length} matter${notApplied.length!==1?'s':''} not yet applied</div>` : ''}
+      </div>
+
+      <!-- Date allocated - upcoming hearings -->
+      <div class="checklist-card" style="margin-bottom:0;">
+        <div class="checklist-card-header">
+          <div class="checklist-card-title">Upcoming hearings</div>
+          <span class="progress-pill">${withDate.length} matter${withDate.length!==1?'s':''}</span>
+        </div>
+        ${!withDate.length ? '<div style="padding:1rem 1.5rem;font-size:13px;color:var(--ink-3);">No dates allocated yet</div>' :
+          withDate.sort((a,b) => new Date(a.dateAllocated) - new Date(b.dateAllocated)).map(m => {
+            const cd = courtDaysUntil(m.dateAllocated);
+            const b = urgencyBucket(cd);
+            return `<div class="checklist-item" onclick="openMatter('${m.id}')" style="cursor:pointer;">
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;">${m.name}</div>
+                <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">${m.caseNo} . ${TYPE_LABELS[m.type]}</div>
+                <div style="font-size:11px;margin-top:4px;">Hearing: ${formatDate(m.dateAllocated)}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:13px;font-weight:600;color:${b.color};">${b.label}</div>
+                ${m.phase2CompletedBy ? '<div style="font-size:10px;padding:2px 6px;border-radius:4px;background:#DCFCE7;color:#166534;margin-top:3px;">Enrolled</div>' : '<div style="font-size:10px;padding:2px 6px;border-radius:4px;background:#FEF3C7;color:#92400E;margin-top:3px;">Pending enrolment</div>'}
+              </div>
+            </div>`;
+          }).join('')}
+      </div>
+    </div>`;
+
+  // All matters list
+  const allMattersHtml = `
+    <div class="checklist-card">
+      <div class="checklist-card-header">
+        <div class="checklist-card-title">All active matters</div>
+        <span class="progress-pill">${all.length} matter${all.length!==1?'s':''}</span>
+      </div>
+      ${all.map(m => {
+        const phase = m.dateAllocated ? 2 : 1;
+        const cl = CHECKLISTS[m.type];
+        const items = phase === 1 ? cl.phase1.items : cl.phase2.items;
+        const done  = items.filter(i => m.checked && m.checked[i.id]).length;
+        const pct   = items.length ? Math.round(done / items.length * 100) : 0;
+        const needsFollowup = m.dateApplied && calendarDaysSince(m.dateApplied) > 20 && !m.dateAllocated;
+        const attyName = ATTORNEYS.find(a => a.email === m.atty) ? ATTORNEYS.find(a => a.email === m.atty).name : m.atty;
+        return `<div class="checklist-item" onclick="openMatter('${m.id}')" style="cursor:pointer;">
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:500;color:var(--ink);">${m.name}</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">${m.caseNo} . ${TYPE_LABELS[m.type]} . Phase ${phase} . ${attyName}</div>
+            <div style="margin-top:6px;height:4px;background:var(--paper-3);border-radius:2px;width:200px;max-width:100%;">
+              <div style="height:100%;background:${pct===100?'#166534':'#B45309'};border-radius:2px;width:${pct}%;transition:width 0.3s;"></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            ${needsFollowup ? '<span style="font-size:11px;font-weight:500;color:#991B1B;background:#FEE2E2;padding:3px 8px;border-radius:4px;">[!] Follow-up</span>' : ''}
+            <span style="font-size:12px;color:var(--ink-3);">${done}/${items.length}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  mainContent.innerHTML = ageAnalysisHtml + allMattersHtml;
+}
+
+function renderMatter(m) {
+  const cl    = CHECKLISTS[m.type];
+  const phase = m.dateAllocated ? 2 : 1;
+  if (currentPhase > phase) currentPhase = phase;
+
+  const daysSince    = m.dateApplied ? calendarDaysSince(m.dateApplied) : 0;
+  const needsFollowup = m.dateApplied && daysSince > 20 && !m.dateAllocated;
+
+  const p1items = cl.phase1.items;
+  const p2items = cl.phase2.items;
+  const p1done  = p1items.filter(i => m.checked && m.checked[i.id]).length;
+  const p2done  = p2items.filter(i => m.checked && m.checked[i.id]).length;
+
+  const items = currentPhase === 1 ? p1items : p2items;
+  const checklistHtml = items.map(item => {
+    const done = m.checked && m.checked[item.id];
+    return `<div class="checklist-item ${done ? 'completed' : ''}">
+      <div class="check-box ${done ? 'checked' : ''}" onclick="toggleCheck('${m.id}','${item.id}')">
+        ${done ? '<span class="check-mark">[check]</span>' : ''}
+      </div>
+      <div>
+        <div class="item-label ${done ? 'done' : ''}">${item.label}</div>
+        ${item.note ? `<div class="item-note">${item.note}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  let deadlinesHtml = '';
+  if (m.dateAllocated && cl.phase2.deadlines) {
+    const dls = cl.phase2.deadlines.map(d => {
+      const dd = addCourtDays(new Date(m.dateAllocated), d.courtDays);
+      const left = courtDaysUntil(dd);
+      let cls = left === null ? 'past' : left <= 3 ? 'urgent' : left <= 7 ? 'soon' : 'ok';
+      return `<div class="deadline-item">
+        <span class="deadline-name">${d.label}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="deadline-date">${formatDate(dd)}</span>
+          <span class="deadline-days ${cls}">${left === null ? 'Past' : left + ' court days'}</span>
+          <button class="outlook-btn" onclick="addToCalendar('${m.id}','${d.label}','${dd.toISOString()}')">Cal Outlook</button>
+        </div>
+      </div>`;
+    }).join('');
+    deadlinesHtml = `
+      <div class="deadline-card">
+        <div class="deadline-header">[Timer] &nbsp;Calculated deadlines from ${formatDate(m.dateAllocated)}
+          <button class="btn btn-sm btn-gold" onclick="addAllToCalendar('${m.id}')" style="margin-left:auto;">Cal Add all to Outlook</button>
+        </div>
+        ${dls}
+      </div>`;
+  }
+
+  const attyName = ATTORNEYS.find(a => a.email === m.atty)?.name || m.atty;
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="matter-header">
+      <div class="matter-header-top">
+        <div>
+          <div class="matter-type-label">${TYPE_LABELS[m.type]}</div>
+          <div class="matter-case-name">${m.name}</div>
+          <div class="matter-ref">${m.caseNo}${m.ghost ? ' . Ghost: ' + m.ghost : ''} . ${attyName}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:4px;">Phase ${phase} of 2</div>
+          <div style="font-size:13px;font-weight:500;color:${phase===2?'var(--green)':'var(--amber)'};">
+            ${phase === 2 ? '[check] Date allocated' : '  Awaiting date'}
+          </div>
+        </div>
+      </div>
+      <div class="matter-meta-row">
+        <div class="meta-item"><div class="meta-label">Date applied</div><div class="meta-value">${m.dateApplied ? formatDate(m.dateApplied) : '-'}</div></div>
+        <div class="meta-item"><div class="meta-label">Date allocated</div><div class="meta-value">${m.dateAllocated ? formatDate(m.dateAllocated) : 'Pending'}</div></div>
+        <div class="meta-item"><div class="meta-label">Phase 1</div><div class="meta-value">${p1done}/${p1items.length}</div></div>
+        <div class="meta-item"><div class="meta-label">Phase 2</div><div class="meta-value">${p2done}/${p2items.length}</div></div>
+      </div>
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <button class="btn btn-sm" style="color:#999;border-color:#e0e0e0;font-size:11px;" onclick="deleteMatter('${m.id}')">
+          Delete matter
+        </button>
+        <button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;" onclick="concludeMatter('${m.id}')">
+          [check] Conclude matter
+        </button>
+      </div>
+    </div>
+
+    ${needsFollowup ? `
+    <div class="followup-alert">
+      <div class="followup-icon">[!]</div>
+      <div class="followup-text">
+        <div class="followup-title">Follow-up required - ${daysSince} days since date application</div>
+        More than 14 court days have passed since the date was applied for on ${formatDate(m.dateApplied)}.
+        Please follow up via email and in person with the Registrar's office.
+      </div>
+    </div>` : ''}
+
+    ${!m.dateApplied ? `
+    <div class="date-input-row">
+      <span class="date-input-label">Cal Record date application submitted:</span>
+      <input type="date" class="date-input" onchange="setDateApplied('${m.id}',this.value)" value="" />
+    </div>` : `
+    <div class="date-input-row" style="background:#EFF6FF;border-color:#BFDBFE;">
+      <span class="date-input-label" style="color:#1E3A5F;">Cal Date applied: ${formatDate(m.dateApplied)}</span>
+      <button class="outlook-btn" style="background:#1E3A5F;" onclick="addFollowUpReminder('${m.id}')">
+        Cal Set 14-day follow-up in Outlook
+      </button>
+      <input type="date" class="date-input" style="margin-left:auto;" onchange="setDateApplied('${m.id}',this.value)" value="${m.dateApplied||''}" title="Change date applied" />
+    </div>`}
+
+    ${m.dateApplied && !m.dateAllocated ? `
+    <div class="date-input-row">
+      <span class="date-input-label">[target] Date allocated? Enter to move to Phase 2:</span>
+      <input type="date" class="date-input" onchange="setDateAllocated('${m.id}',this.value)" value="" />
+    </div>` : ''}
+
+    ${m.dateAllocated ? `
+    <div style="background:var(--green-light);border:1px solid #BBF7D0;border-radius:8px;padding:0.75rem 1.5rem;margin-bottom:1.25rem;font-size:13px;color:var(--green);font-weight:500;display:flex;align-items:center;gap:1rem;">
+      [check] Court date: ${formatDate(m.dateAllocated)} - Phase 2 active
+      <input type="date" class="date-input" style="margin-left:auto;" onchange="setDateAllocated('${m.id}',this.value)" value="${m.dateAllocated||''}" title="Change date" />
+    </div>` : ''}
+
+    ${m.phase1CompletedBy ? `
+    <div style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.875rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">[check]</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#166534;">Date application requirements completed</div>
+        <div style="font-size:12px;color:#166534;margin-top:2px;">Completed by ${m.phase1CompletedBy} on ${formatDate(m.phase1CompletedDate)}</div>
+      </div>
+    </div>` : ''}
+
+    ${m.phase2CompletedBy ? `
+    <div style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.875rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;">[check]</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#166534;">Enrolment completed</div>
+        <div style="font-size:12px;color:#166534;margin-top:2px;">Enrolled by ${m.phase2CompletedBy} on ${formatDate(m.phase2CompletedDate)}</div>
+      </div>
+    </div>` : ''}
+
+    <div class="phase-tabs">
+      <button class="phase-tab ${currentPhase===1?'active':''}" onclick="switchPhase(1,'${m.id}')">Phase 1 - ${cl.phase1.title}</button>
+      <button class="phase-tab ${currentPhase===2?'active':''}" onclick="switchPhase(2,'${m.id}')" ${!m.dateAllocated?'disabled':''}>Phase 2 - ${cl.phase2.title}</button>
+    </div>
+
+    <div class="checklist-card">
+      <div class="checklist-card-header">
+        <div class="checklist-card-title">${currentPhase===1?cl.phase1.title:cl.phase2.title}</div>
+        <span class="progress-pill">${currentPhase===1?p1done+'/'+p1items.length:p2done+'/'+p2items.length} complete</span>
+      </div>
+      ${checklistHtml}
+      ${currentPhase === 1 && !m.phase1CompletedBy ? `
+      <div style="padding:12px 1.5rem;border-top:1px solid var(--border);background:var(--paper-2);">
+        <button class="btn btn-sm" style="background:#166534;color:white;border-color:#166534;width:100%;justify-content:center;" onclick="completePhase('${m.id}',1)">
+          [check] Mark Phase 1 complete - all date application requirements met
+        </button>
+      </div>` : ''}
+      ${currentPhase === 2 && m.dateAllocated && !m.phase2CompletedBy ? `
+      <div style="padding:12px 1.5rem;border-top:1px solid var(--border);background:var(--paper-2);">
+        <button class="btn btn-sm" style="background:#166534;color:white;border-color:#166534;width:100%;justify-content:center;" onclick="completePhase('${m.id}',2)">
+          [check] Mark enrolment complete
+        </button>
+      </div>` : ''}
+    </div>
+
+    ${deadlinesHtml}
+  `;
+}
+
+function switchPhase(phase, matterId) {
+  currentPhase = phase;
+  const m = matters[matterId];
+  if (m) renderMatter(m);
+}
+
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#991B1B' : '#1C1917';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Expose functions to global scope
+window.openNewMatter  = openNewMatter;
+window.closeModal     = closeModal;
+window.createMatter   = createMatter;
+window.openMatter     = openMatter;
+window.showDashboard  = showDashboard;
+window.toggleCheck    = toggleCheck;
+window.setDateApplied = setDateApplied;
+window.setDateAllocated = setDateAllocated;
+window.switchPhase    = switchPhase;
+window.addToCalendar  = addToCalendar;
+window.addAllToCalendar = addAllToCalendar;
+window.addUrgentCalendarReminders = addUrgentCalendarReminders;
+window.showUrgentMatters = showUrgentMatters;
+
+window.completeUrgentMatter = async function(matterId) {
+  const names = ATTORNEYS.map(function(a){return a.name;});
+  const nameList = names.map(function(n,i){return (i+1)+'. '+n;}).join(' | ');
+  const input = prompt('Select your name (enter number): ' + nameList);
+  if (!input) return;
+  const idx = parseInt(input) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= names.length) { toast('Invalid selection', true); return; }
+  const personName = names[idx];
+  try {
+    await updateDoc(doc(db, 'matters', matterId), {
+      urgentCompletedBy: personName,
+      urgentCompletedDate: new Date().toISOString()
+    });
+    toast('Urgent matter marked complete by ' + personName);
+    renderUrgentMatters();
+  } catch(e) { toast('Error: ' + e.message, true); }
+};
+window.addFollowUpReminder = function(matterId) {
+  const m = matters[matterId];
+  if (!m || !m.dateApplied) return;
+  const followUpDate = addCourtDays(new Date(m.dateApplied), 14);
+  const subject = '[FOLLOW-UP] Date application - ' + m.name + ' (' + m.caseNo + ')';
+  const body = '14 court days since date application on ' + formatDate(m.dateApplied) + '. Follow up with Registrar. Matter: ' + m.name + '. Case: ' + m.caseNo + '.';
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+  const ymd = followUpDate.getFullYear() + '-' + pad(followUpDate.getMonth()+1) + '-' + pad(followUpDate.getDate());
+  const startdt = ymd + 'T09:00:00';
+  const enddt   = ymd + 'T10:00:00';
+  const to = ATTORNEYS.map(function(a){return a.email;}).join(';');
+  const url = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(subject) + '&startdt=' + startdt + '&enddt=' + enddt + '&body=' + encodeURIComponent(body) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+  window.open(url, '_blank');
+  toast('14-day follow-up reminder added to Outlook');
+};
+
+window.deleteMatter = async function(matterId) {
+  const pin = prompt('Enter PIN to delete this matter:');
+  if (pin !== '1902') {
+    toast('Incorrect PIN - deletion not authorised', true);
+    return;
+  }
+  const m = matters[matterId];
+  if (!m) return;
+  const confirm_del = prompt('Type DELETE to confirm permanent removal of: ' + m.name);
+  if (confirm_del !== 'DELETE') {
+    toast('Deletion cancelled', true);
+    return;
+  }
+  try {
+    const { deleteDoc: dd } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await dd(doc(db, 'matters', matterId));
+    currentMatterId = null;
+    document.getElementById('page-title').textContent = 'Dashboard';
+    document.getElementById('page-sub').textContent = 'Litigation matter tracking';
+    renderDashboard();
+    toast('Matter permanently deleted');
+  } catch(e) { toast('Error deleting: ' + e.message, true); }
+}
+
+window.completePhase = async function(matterId, phase) {
+  const names = ATTORNEYS.map(a => a.name);
+  const nameList = names.map((n, i) => (i+1) + '. ' + n).join(' | ');
+  const input = prompt('Select your name (enter number): ' + nameList);
+  if (!input) return;
+  const idx = parseInt(input) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= names.length) {
+    toast('Invalid selection', true);
+    return;
+  }
+  const personName = names[idx];
+  const completedDate = new Date().toISOString();
+  const updateData = {};
+  if (phase === 1) {
+    updateData.phase1CompletedBy = personName;
+    updateData.phase1CompletedDate = completedDate;
+  } else {
+    updateData.phase2CompletedBy = personName;
+    updateData.phase2CompletedDate = completedDate;
+  }
+  try {
+    await updateDoc(doc(db, 'matters', matterId), updateData);
+    toast('Phase ' + phase + ' marked complete by ' + personName);
+  } catch(e) { toast('Error saving', true); }
+}
+
+window.concludeMatter = async function(matterId) {
+  const m = matters[matterId];
+  if (!m) return;
+  const note = prompt('Add a conclusion note (optional) - e.g. Order granted 18 May 2026');
+  if (note === null) return; // cancelled
+  try {
+    await updateDoc(doc(db, 'matters', matterId), {
+      status: 'concluded',
+      concludedDate: new Date().toISOString(),
+      conclusionNote: note || ''
+    });
+    currentMatterId = null;
+    document.getElementById('page-title').textContent = 'Dashboard';
+    document.getElementById('page-sub').textContent = 'Litigation matter tracking';
+    renderDashboard();
+    toast('Matter concluded and moved to archive');
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+window.restoreMatter = async function(matterId) {
+  try {
+    await updateDoc(doc(db, 'matters', matterId), {
+      status: 'active',
+      concludedDate: null,
+      conclusionNote: ''
+    });
+    toast('Matter restored to active');
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+// Start
+startListening();
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1C1917;--ink-2:#44403C;--ink-3:#78716C;--ink-4:#A8A29E;
+  --paper:#FAFAF9;--paper-2:#F5F4F0;--paper-3:#E7E5E4;
+  --gold:#B45309;--gold-light:#FEF3C7;
+  --green:#166534;--green-light:#DCFCE7;
+  --red:#991B1B;--red-light:#FEE2E2;
+  --blue:#1E3A5F;--blue-light:#DBEAFE;
+  --amber:#92400E;--amber-light:#FEF3C7;
+  --border:#E7E5E4;
+  --shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg:0 10px 15px rgba(0,0,0,0.08),0 4px 6px rgba(0,0,0,0.04);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--paper-2);color:var(--ink);min-height:100vh;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:280px;min-width:280px;background:var(--ink);color:var(--paper);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:100;}
+.main{margin-left:280px;flex:1;min-height:100vh;}
+.sidebar-header{padding:2rem 1.5rem 1.5rem;border-bottom:1px solid rgba(255,255,255,0.1);}
+.firm-name{font-family:'DM Serif Display',serif;font-size:15px;color:var(--paper);line-height:1.3;margin-bottom:4px;}
+.system-name{font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;}
+.sidebar-section{padding:1rem 1.5rem 0.5rem;font-size:10px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-transform:uppercase;}
+.sidebar-btn{display:flex;align-items:center;gap:10px;padding:10px 1.5rem;font-size:13px;color:rgba(255,255,255,0.65);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:'DM Sans',sans-serif;transition:all 0.15s;border-left:2px solid transparent;}
+.sidebar-btn:hover{color:var(--paper);background:rgba(255,255,255,0.05);}
+.sidebar-btn.active{color:var(--paper);background:rgba(255,255,255,0.08);border-left-color:var(--gold);}
+.matter-item{padding:10px 1.5rem;cursor:pointer;border-left:2px solid transparent;transition:all 0.15s;}
+.matter-item:hover{background:rgba(255,255,255,0.05);}
+.matter-item.active{background:rgba(255,255,255,0.08);border-left-color:var(--gold);}
+.matter-title{font-size:12px;font-weight:500;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.matter-meta{font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;}
+.matter-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;}
+.badge-unopposed{background:rgba(22,101,52,0.3);color:#86EFAC;}
+.badge-opposed{background:rgba(30,58,95,0.3);color:#93C5FD;}
+.badge-default{background:rgba(146,64,14,0.3);color:#FCD34D;}
+.badge-phase1{background:rgba(180,83,9,0.2);color:#FCD34D;}
+.badge-phase2{background:rgba(22,101,52,0.2);color:#86EFAC;}
+.new-matter-btn{margin:1rem 1.5rem;padding:10px;background:var(--gold);color:white;border:none;border-radius:6px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;width:calc(100% - 3rem);display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity 0.15s;}
+.new-matter-btn:hover{opacity:0.88;}
+.sidebar-footer{margin-top:auto;padding:1rem 1.5rem;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;color:rgba(255,255,255,0.3);}
+.stats-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0.75rem 1.5rem;}
+.stat-mini{background:rgba(255,255,255,0.05);border-radius:6px;padding:8px 10px;}
+.stat-mini-label{font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:2px;}
+.stat-mini-val{font-size:18px;font-weight:600;color:var(--paper);}
+.topbar{background:var(--paper);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.page-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--ink);}
+.page-sub{font-size:12px;color:var(--ink-3);margin-top:2px;}
+.topbar-actions{display:flex;gap:8px;align-items:center;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:13px;border-radius:6px;border:1px solid var(--border);background:var(--paper);color:var(--ink);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s;}
+.btn:hover{background:var(--paper-2);}
+.btn-primary{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.btn-primary:hover{opacity:0.88;background:var(--ink);}
+.btn-gold{background:var(--gold);color:white;border-color:var(--gold);}
+.btn-gold:hover{opacity:0.88;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.content{padding:2rem;}
+.matter-header{background:var(--paper);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:var(--shadow);}
+.matter-header-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem;}
+.matter-type-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px;}
+.matter-case-name{font-family:'DM Serif Display',serif;font-size:20px;color:var(--ink);margin-bottom:4px;}
+.matter-ref{font-size:13px;color:var(--ink-3);}
+.matter-meta-row{display:flex;gap:2rem;flex-wrap:wrap;}
+.meta-label{font-size:11px;color:var(--ink-4);margin-bottom:2px;}
+.meta-value{font-size:13px;font-weight:500;color:var(--ink);}
+.phase-tabs{display:flex;gap:4px;margin-bottom:1.5rem;background:var(--paper-3);padding:4px;border-radius:8px;width:fit-content;}
+.phase-tab{padding:8px 20px;border-radius:6px;border:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.15s;color:var(--ink-3);background:none;}
+.phase-tab.active{background:var(--paper);color:var(--ink);box-shadow:var(--shadow);}
+.phase-tab:disabled{opacity:0.4;cursor:not-allowed;}
+.checklist-card{background:var(--paper);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:1.25rem;}
+.checklist-card-header{padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.checklist-card-title{font-size:13px;font-weight:600;color:var(--ink);}
+.progress-pill{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:var(--paper-2);color:var(--ink-3);}
+.checklist-item{display:flex;align-items:flex-start;gap:12px;padding:12px 1.5rem;border-bottom:1px solid var(--border);transition:background 0.1s;cursor:default;}
+.checklist-item:last-child{border-bottom:none;}
+.checklist-item:hover{background:var(--paper-2);}
+.checklist-item.completed{opacity:0.6;}
+.check-box{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border);background:var(--paper);flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.check-box:hover{border-color:var(--gold);}
+.check-box.checked{background:var(--green);border-color:var(--green);}
+.check-mark{color:white;font-size:11px;}
+.item-label{font-size:13px;color:var(--ink);line-height:1.5;}
+.item-label.done{text-decoration:line-through;color:var(--ink-3);}
+.item-note{font-size:11px;color:var(--ink-4);margin-top:3px;}
+.date-input-row{background:var(--amber-light);border:1px solid #FDE68A;border-radius:8px;padding:1rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.date-input-label{font-size:13px;font-weight:500;color:var(--amber);flex-shrink:0;}
+.date-input{padding:7px 10px;border-radius:6px;border:1px solid #FDE68A;background:white;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none;}
+.date-input:focus{border-color:var(--gold);}
+.deadline-card{background:var(--paper);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:1.25rem;}
+.deadline-header{padding:1rem 1.5rem;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.deadline-item{display:flex;align-items:center;justify-content:space-between;padding:10px 1.5rem;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap;gap:8px;}
+.deadline-item:last-child{border-bottom:none;}
+.deadline-name{color:var(--ink);}
+.deadline-date{font-weight:500;color:var(--blue);}
+.deadline-days{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;}
+.deadline-days.urgent{background:var(--red-light);color:var(--red);}
+.deadline-days.soon{background:var(--amber-light);color:var(--amber);}
+.deadline-days.ok{background:var(--green-light);color:var(--green);}
+.deadline-days.past{background:var(--paper-3);color:var(--ink-3);}
+.followup-alert{background:var(--red-light);border:1px solid #FECACA;border-radius:8px;padding:1rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:10px;}
+.followup-icon{font-size:18px;flex-shrink:0;}
+.followup-text{font-size:13px;color:var(--red);line-height:1.5;}
+.followup-title{font-weight:600;margin-bottom:2px;}
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--ink-3);}
+.empty-icon{font-size:48px;margin-bottom:1rem;}
+.empty-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--ink-2);margin-bottom:8px;}
+.empty-sub{font-size:14px;line-height:1.6;margin-bottom:1.5rem;}
+.outlook-btn{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;background:#0078D4;color:white;border:none;font-size:11px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:opacity 0.15s;white-space:nowrap;}
+.outlook-btn:hover{opacity:0.88;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--paper);border-radius:12px;width:100%;max-width:520px;box-shadow:var(--shadow-lg);overflow:hidden;}
+.modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--ink);}
+.modal-body{padding:1.5rem;display:flex;flex-direction:column;gap:1rem;}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.form-field{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:12px;font-weight:500;color:var(--ink-2);}
+.form-input,.form-select{padding:9px 12px;border-radius:6px;border:1px solid var(--border);background:var(--paper);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none;transition:border-color 0.15s;appearance:none;}
+.form-input:focus,.form-select:focus{border-color:var(--ink-3);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.loading{display:flex;align-items:center;justify-content:center;height:200px;font-size:14px;color:var(--ink-3);}
+.success-toast{position:fixed;bottom:2rem;right:2rem;background:var(--ink);color:var(--paper);padding:12px 20px;border-radius:8px;font-size:13px;z-index:300;transform:translateY(100px);opacity:0;transition:all 0.3s ease;}
+.success-toast.show{transform:translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="firm-name">Albert Hibbert Attorneys Inc.</div>
+    <div class="system-name">Litigation Checklist</div>
+  </div>
+  <button class="new-matter-btn" onclick="openNewMatter()">+ New matter</button>
+  <div class="stats-mini">
+    <div class="stat-mini"><div class="stat-mini-label">Total</div><div class="stat-mini-val" id="stat-total">0</div></div>
+    <div class="stat-mini"><div class="stat-mini-label">Follow-up</div><div class="stat-mini-val" id="stat-fu" style="color:#86EFAC">0</div></div>
+    <div class="stat-mini"><div class="stat-mini-label">Phase 1</div><div class="stat-mini-val" id="stat-p1">0</div></div>
+    <div class="stat-mini"><div class="stat-mini-label">Phase 2</div><div class="stat-mini-val" id="stat-p2">0</div></div>
+  </div>
+  <div class="sidebar-section">Dashboard</div>
+  <button class="sidebar-btn active" onclick="showDashboard()">  &nbsp;Overview</button>
+  <button class="sidebar-btn" id="urgent-sidebar-btn" onclick="showUrgentMatters()" style="color:rgba(255,150,150,0.9);">* Urgent Matters <span id="urgent-count-badge" style="margin-left:auto;background:rgba(153,27,27,0.4);color:#FCA5A5;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;display:none;">0</span></button>
+  <div class="sidebar-section">Active matters</div>
+  <div id="matter-list"><div style="padding:0.75rem 1.5rem;font-size:12px;color:rgba(255,255,255,0.25);">Connecting...</div></div>
+  <div class="sidebar-footer">Gauteng Division . Directive 1/2024</div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="page-sub" id="page-sub">Litigation matter tracking</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-primary" onclick="openNewMatter()">+ New matter</button>
+    </div>
+  </div>
+  <div class="content" id="main-content"><div class="loading">Connecting to database...</div></div>
+</div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New matter</div>
+      <button class="btn btn-sm" onclick="closeModal()">[x]</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="form-label">Matter / Case name *</label>
+        <input class="form-input" id="m-name" placeholder="e.g. Smith v Jones (Pty) Ltd" />
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">Case number *</label>
+          <input class="form-input" id="m-case" placeholder="e.g. 12345/2024" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Matter type *</label>
+          <select class="form-select" id="m-type" onchange="onMatterTypeChange()">
+            <option value="unopposed">Unopposed Motion</option>
+            <option value="opposed">Opposed Motion</option>
+            <option value="default">Default Judgment</option>
+            <option value="urgent">Urgent Matter</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">Responsible person</label>
+          <select class="form-select" id="m-attorney">
+            <option value="jaco@hibbertlaw.co.za">Jaco du Plooy</option>
+            <option value="aha3@hibbertlaw.co.za">Mikhael Venter</option>
+            <option value="aha4@hibbertlaw.co.za">Westine van Tonder</option>
+            <option value="aha5@hibbertlaw.co.za">Liezel Coetzee</option>
+            <option value="aha6@hibbertlaw.co.za">Clarissa Viljoen</option>
+            <option value="aha7@hibbertlaw.co.za">Charne Liebenberg</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Ghost reference</label>
+          <input class="form-input" id="m-ghost" placeholder="e.g. AH/2026/045" />
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Date application submitted</label>
+        <input class="form-input" type="date" id="m-date-applied" />
+      </div>
+      <div class="form-field" id="urgent-date-field" style="display:none;">
+        <label class="form-label">Urgent hearing date (Tuesday) *</label>
+        <input class="form-input" type="date" id="m-urgent-date" />
+        <div style="font-size:11px;color:var(--ink-3);margin-top:4px;">Select the Tuesday the matter is set down. System will calculate Thursday closing deadline automatically.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createMatter()">Create matter</button>
+    </div>
+  </div>
+</div>
+
+<div class="success-toast" id="toast"></div>
+</body>
+</html>
