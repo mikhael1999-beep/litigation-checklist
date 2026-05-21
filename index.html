@@ -605,72 +605,162 @@ function openUrgentMatter(id) {
 
 function renderUrgentMatterDetail(m) {
   const mainContent = document.getElementById('main-content');
-  const thursday   = m.urgentDate ? getPrevThursday(new Date(m.urgentDate)) : null;
+  const thursday = m.urgentDate ? getPrevThursday(new Date(m.urgentDate)) : null;
   const daysUntilHearing = m.urgentDate ? courtDaysUntil(m.urgentDate) : null;
   const done = URGENT_CHECKLIST.filter(function(i) { return m.checked && m.checked[i.id]; }).length;
   const directiveDone = m.checked && m.checked[URGENT_DIRECTIVE.id];
-  const attyName = ATTORNEYS.find(function(a) { return a.email === m.atty; }) ? ATTORNEYS.find(function(a) { return a.email === m.atty; }).name : m.atty;
-  const urgencyColor = daysUntilHearing === null ? '#78716C' : daysUntilHearing <= 3 ? '#991B1B' : daysUntilHearing <= 7 ? '#92400E' : '#166534';
-  const urgencyBg    = daysUntilHearing === null ? '#E7E5E4' : daysUntilHearing <= 3 ? '#FEE2E2' : daysUntilHearing <= 7 ? '#FEF3C7' : '#DCFCE7';
+  const attyObj = ATTORNEYS.find(function(a) { return a.email === m.atty; });
+  const attyName = attyObj ? attyObj.name : m.atty;
+  const urgColor = daysUntilHearing === null ? '#78716C' : daysUntilHearing <= 3 ? '#991B1B' : daysUntilHearing <= 7 ? '#92400E' : '#166534';
+  const urgBg    = daysUntilHearing === null ? '#E7E5E4' : daysUntilHearing <= 3 ? '#FEE2E2' : daysUntilHearing <= 7 ? '#FEF3C7' : '#DCFCE7';
 
-  const checklistItems = URGENT_CHECKLIST.map(function(item) {
-    const chk = m.checked && m.checked[item.id];
-    const itemDiv = document.createElement('div');
-    itemDiv.className = 'checklist-item' + (chk ? ' completed' : '');
-    itemDiv.innerHTML = '<div class="check-box ' + (chk?'checked':'') + '" onclick="toggleCheck('' + m.id + '','' + item.id + '')">' + (chk?'<span class="check-mark">&#10003;</span>':'') + '</div><div class="item-label ' + (chk?'done':'') + '">' + item.label + '</div>';
-    return itemDiv.outerHTML;
-  }).join('');
+  mainContent.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'checklist-card';
+  card.style.marginBottom = '1.5rem';
 
-  const dirChk = m.checked && m.checked[URGENT_DIRECTIVE.id];
-  const directiveItem = '<div class="checklist-item" style="background:' + (dirChk?'#DCFCE7':'#FEF3C7') + ';border-left:3px solid ' + (dirChk?'#166534':'#B45309') + '"><div class="check-box ' + (dirChk?'checked':'') + '" style="border-color:' + (dirChk?'#166534':'#B45309') + '" onclick="toggleCheck('' + m.id + '','' + URGENT_DIRECTIVE.id + '')">' + (dirChk?'<span class="check-mark">&#10003;</span>':'') + '</div><div><div class="item-label ' + (dirChk?'done':'') + '" style="font-weight:500">' + URGENT_DIRECTIVE.label + '</div></div></div>';
-
-  const completedBanner = m.urgentCompletedBy ? '<div style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.75rem 1.5rem;margin-top:1rem;font-size:13px;font-weight:500;color:#166534;">Enrolment completed by ' + m.urgentCompletedBy + ' on ' + formatDate(m.urgentCompletedDate) + '</div>' : '';
-
-  const btnDiv = document.createElement('div');
-  btnDiv.style.cssText = 'padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;';
-  btnDiv.innerHTML = '<button class="btn btn-sm" onclick="showUrgentMatters()" style="color:var(--ink-3);">&larr; All urgent matters</button>' +
-    '<button class="outlook-btn" style="background:#1E3A5F;margin-left:auto;" onclick="addUrgentCalendarReminders('' + m.id + '')">Add all reminders to Outlook</button>' +
-    '<button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;" onclick="concludeMatter('' + m.id + '')">Conclude</button>' +
-    '<button class="btn btn-sm" style="color:#999;border-color:#e0e0e0;font-size:11px;" onclick="deleteMatter('' + m.id + '')">Delete</button>';
-
-  const completeDiv = document.createElement('div');
-  completeDiv.style.cssText = 'padding:12px 1.5rem;border-top:1px solid var(--border);background:var(--paper-2);';
-  completeDiv.innerHTML = '<button class="btn btn-sm" style="background:#166534;color:white;border-color:#166534;width:100%;justify-content:center;" onclick="completeUrgentMatter('' + m.id + '')">Mark urgent matter enrolment complete</button>';
-
-  mainContent.innerHTML = '<div class="checklist-card" style="margin-bottom:1.5rem;">' +
-    '<div class="checklist-card-header" style="background:var(--paper-2);">' +
-      '<div style="flex:1;">' +
-        '<div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#991B1B;margin-bottom:3px;">Urgent Matter</div>' +
-        '<div style="font-size:15px;font-weight:600;color:var(--ink);">' + m.name + '</div>' +
-        '<div style="font-size:12px;color:var(--ink-3);margin-top:2px;">' + m.caseNo + ' . ' + attyName + '</div>' +
-      '</div>' +
-      '<div style="text-align:right;flex-shrink:0;">' +
-        '<div style="font-size:13px;font-weight:600;color:' + urgencyColor + ';background:' + urgencyBg + ';padding:4px 10px;border-radius:6px;">' +
-          (daysUntilHearing === null ? 'Heard' : daysUntilHearing + ' court days') +
-        '</div>' +
-      '</div>' +
+  // Header
+  const cardHeader = document.createElement('div');
+  cardHeader.className = 'checklist-card-header';
+  cardHeader.style.background = 'var(--paper-2)';
+  cardHeader.innerHTML =
+    '<div style="flex:1;">' +
+      '<div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#991B1B;margin-bottom:3px;">Urgent Matter</div>' +
+      '<div style="font-size:15px;font-weight:600;color:var(--ink);">' + m.name + '</div>' +
+      '<div style="font-size:12px;color:var(--ink-3);margin-top:2px;">' + m.caseNo + ' . ' + attyName + '</div>' +
     '</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--border);">' +
-      '<div style="padding:10px 1.5rem;border-right:1px solid var(--border);">' +
-        '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Hearing date</div>' +
-        '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + (m.urgentDate ? formatDate(m.urgentDate) : 'Not set') + '</div>' +
+    '<div style="text-align:right;flex-shrink:0;">' +
+      '<div style="font-size:13px;font-weight:600;color:' + urgColor + ';background:' + urgBg + ';padding:4px 10px;border-radius:6px;">' +
+        (daysUntilHearing === null ? 'Heard' : daysUntilHearing + ' court days') +
       '</div>' +
-      '<div style="padding:10px 1.5rem;border-right:1px solid var(--border);">' +
-        '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Closes Thursday</div>' +
-        '<div style="font-size:13px;font-weight:500;color:#991B1B;">' + (thursday ? formatDate(thursday) + ' at 12:00' : '-') + '</div>' +
-      '</div>' +
-      '<div style="padding:10px 1.5rem;">' +
-        '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Progress</div>' +
-        '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + done + '/' + URGENT_CHECKLIST.length + ' items' + (directiveDone?' + directive':' - directive pending') + '</div>' +
-      '</div>' +
-    '</div>' +
-    btnDiv.outerHTML +
-    checklistItems +
-    directiveItem +
-    (!m.urgentCompletedBy ? completeDiv.outerHTML : '') +
-    completedBanner +
     '</div>';
+  card.appendChild(cardHeader);
+
+  // Meta row
+  const metaRow = document.createElement('div');
+  metaRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--border);';
+  metaRow.innerHTML =
+    '<div style="padding:10px 1.5rem;border-right:1px solid var(--border);">' +
+      '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Hearing date</div>' +
+      '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + (m.urgentDate ? formatDate(m.urgentDate) : 'Not set') + '</div>' +
+    '</div>' +
+    '<div style="padding:10px 1.5rem;border-right:1px solid var(--border);">' +
+      '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Closes Thursday</div>' +
+      '<div style="font-size:13px;font-weight:500;color:#991B1B;">' + (thursday ? formatDate(thursday) + ' at 12:00' : '-') + '</div>' +
+    '</div>' +
+    '<div style="padding:10px 1.5rem;">' +
+      '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Progress</div>' +
+      '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + done + '/' + URGENT_CHECKLIST.length + ' items' + (directiveDone ? ' + directive' : ' - directive pending') + '</div>' +
+    '</div>';
+  card.appendChild(metaRow);
+
+  // Action buttons row
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'btn btn-sm';
+  backBtn.style.color = 'var(--ink-3)';
+  backBtn.textContent = '<< All urgent matters';
+  backBtn.addEventListener('click', function() { showUrgentMatters(); });
+  btnRow.appendChild(backBtn);
+
+  const outlookBtn = document.createElement('button');
+  outlookBtn.className = 'outlook-btn';
+  outlookBtn.style.cssText = 'background:#1E3A5F;margin-left:auto;';
+  outlookBtn.textContent = 'Add all reminders to Outlook';
+  outlookBtn.dataset.mid = m.id;
+  outlookBtn.addEventListener('click', function() { addUrgentCalendarReminders(this.dataset.mid); });
+  btnRow.appendChild(outlookBtn);
+
+  const concludeBtn = document.createElement('button');
+  concludeBtn.className = 'btn btn-sm';
+  concludeBtn.style.cssText = 'color:var(--red);border-color:#FECACA;';
+  concludeBtn.textContent = 'Conclude';
+  concludeBtn.dataset.mid = m.id;
+  concludeBtn.addEventListener('click', function() { concludeMatter(this.dataset.mid); });
+  btnRow.appendChild(concludeBtn);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn btn-sm';
+  deleteBtn.style.cssText = 'color:#999;border-color:#e0e0e0;font-size:11px;';
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.dataset.mid = m.id;
+  deleteBtn.addEventListener('click', function() { deleteMatter(this.dataset.mid); });
+  btnRow.appendChild(deleteBtn);
+
+  card.appendChild(btnRow);
+
+  // Checklist items
+  URGENT_CHECKLIST.forEach(function(item) {
+    const chk = m.checked && m.checked[item.id];
+    const row = document.createElement('div');
+    row.className = 'checklist-item' + (chk ? ' completed' : '');
+    row.style.borderBottom = '1px solid var(--border)';
+
+    const box = document.createElement('div');
+    box.className = 'check-box' + (chk ? ' checked' : '');
+    if (chk) box.innerHTML = '<span class="check-mark">&#10003;</span>';
+    box.dataset.mid = m.id;
+    box.dataset.iid = item.id;
+    box.addEventListener('click', function() { toggleCheck(this.dataset.mid, this.dataset.iid); });
+
+    const label = document.createElement('div');
+    label.className = 'item-label' + (chk ? ' done' : '');
+    label.textContent = item.label;
+
+    row.appendChild(box);
+    row.appendChild(label);
+    card.appendChild(row);
+  });
+
+  // Directive item
+  const dirChk = m.checked && m.checked[URGENT_DIRECTIVE.id];
+  const dirRow = document.createElement('div');
+  dirRow.className = 'checklist-item';
+  dirRow.style.cssText = 'background:' + (dirChk ? '#DCFCE7' : '#FEF3C7') + ';border-left:3px solid ' + (dirChk ? '#166534' : '#B45309') + ';border-bottom:1px solid var(--border);';
+
+  const dirBox = document.createElement('div');
+  dirBox.className = 'check-box' + (dirChk ? ' checked' : '');
+  dirBox.style.borderColor = dirChk ? '#166534' : '#B45309';
+  if (dirChk) dirBox.innerHTML = '<span class="check-mark">&#10003;</span>';
+  dirBox.dataset.mid = m.id;
+  dirBox.dataset.iid = URGENT_DIRECTIVE.id;
+  dirBox.addEventListener('click', function() { toggleCheck(this.dataset.mid, this.dataset.iid); });
+
+  const dirLabel = document.createElement('div');
+  dirLabel.innerHTML = '<div class="item-label' + (dirChk ? ' done' : '') + '" style="font-weight:500;">' + URGENT_DIRECTIVE.label + '</div>';
+
+  dirRow.appendChild(dirBox);
+  dirRow.appendChild(dirLabel);
+  card.appendChild(dirRow);
+
+  // Complete button
+  if (!m.urgentCompletedBy) {
+    const completeRow = document.createElement('div');
+    completeRow.style.cssText = 'padding:12px 1.5rem;border-top:1px solid var(--border);background:var(--paper-2);';
+    const completeBtn = document.createElement('button');
+    completeBtn.className = 'btn btn-sm';
+    completeBtn.style.cssText = 'background:#166534;color:white;border-color:#166534;width:100%;justify-content:center;';
+    completeBtn.textContent = 'Mark urgent matter enrolment complete';
+    completeBtn.dataset.mid = m.id;
+    completeBtn.addEventListener('click', function() { completeUrgentMatter(this.dataset.mid); });
+    completeRow.appendChild(completeBtn);
+    card.appendChild(completeRow);
+  }
+
+  // Completed banner
+  if (m.urgentCompletedBy) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.75rem 1.5rem;margin-top:1rem;font-size:13px;font-weight:500;color:#166534;';
+    banner.textContent = 'Enrolment completed by ' + m.urgentCompletedBy + ' on ' + formatDate(m.urgentCompletedDate);
+    card.appendChild(banner);
+  }
+
+  mainContent.appendChild(card);
 }
+
+
 
 
 function showDashboard() {
