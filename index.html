@@ -528,50 +528,72 @@ function showUrgentMatters() {
 }
 
 function renderUrgentMatters() {
-  const urgentMatters = Object.values(matters).filter(function(m) { return m.type === 'urgent' && m.status !== 'concluded'; });
+  const urgentMatters = Object.values(matters).filter(function(m) {
+    return m.type === 'urgent' && m.status !== 'concluded';
+  });
   const mainContent = document.getElementById('main-content');
 
   if (!urgentMatters.length) {
-    mainContent.innerHTML = '<div class="empty-state"><div class="empty-icon" style="font-size:32px;color:#991B1B;">!</div><div class="empty-title">No urgent matters</div><div class="empty-sub">Create an urgent matter using the + New matter button.</div><button class="btn btn-primary" onclick="openNewMatter()">+ New urgent matter</button></div>';
+    mainContent.innerHTML = '<div class="empty-state"><div style="font-size:32px;color:#991B1B;margin-bottom:1rem;">!</div><div class="empty-title">No urgent matters</div><div class="empty-sub">Create an urgent matter using the + New matter button.</div><button class="btn btn-primary" onclick="openNewMatter()">+ New urgent matter</button></div>';
     return;
   }
 
-  // Show list overview
-  mainContent.innerHTML = '<div class="checklist-card">' +
-    '<div class="checklist-card-header"><div class="checklist-card-title">Urgent matters</div>' +
-    '<span class="progress-pill">' + urgentMatters.length + ' matter' + (urgentMatters.length !== 1 ? 's' : '') + '</span></div>' +
-    urgentMatters.sort(function(a,b) {
-      return new Date(a.urgentDate || 0) - new Date(b.urgentDate || 0);
-    }).map(function(m) {
-      const thursday = m.urgentDate ? getPrevThursday(new Date(m.urgentDate)) : null;
-      const daysLeft = m.urgentDate ? courtDaysUntil(m.urgentDate) : null;
-      const done = URGENT_CHECKLIST.filter(function(i) { return m.checked && m.checked[i.id]; }).length;
-      const urgColor = daysLeft === null ? '#78716C' : daysLeft <= 3 ? '#991B1B' : daysLeft <= 7 ? '#92400E' : '#166534';
-      const urgBg    = daysLeft === null ? '#E7E5E4' : daysLeft <= 3 ? '#FEE2E2' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7';
-      const attyName = ATTORNEYS.find(function(a) { return a.email === m.atty; }) ? ATTORNEYS.find(function(a) { return a.email === m.atty; }).name : m.atty;
-      const pct = Math.round(done / URGENT_CHECKLIST.length * 100);
-      const li = document.createElement('div');
-      li.className = 'checklist-item';
-      li.style.cssText = 'cursor:pointer;';
-      li.dataset.id = m.id;
-      li.addEventListener('click', function() { openUrgentMatter(this.dataset.id); });
-      li.innerHTML =
-        '<div style="flex:1;">' +
-          '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + m.name + '</div>' +
-          '<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">' + m.caseNo + ' . ' + attyName + '</div>' +
-          '<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">Hearing: ' + (m.urgentDate ? formatDate(m.urgentDate) : 'Not set') + ' . Closes: ' + (thursday ? formatDate(thursday) + ' 12:00' : '-') + '</div>' +
-          '<div style="margin-top:6px;height:4px;background:var(--paper-3);border-radius:2px;width:200px;max-width:100%;">' +
-            '<div style="height:100%;background:' + (pct === 100 ? '#166534' : '#B45309') + ';border-radius:2px;width:' + pct + '%;"></div>' +
-          '</div>' +
-        '</div>' +
-        '<div style="text-align:right;flex-shrink:0;">' +
-          '<div style="font-size:13px;font-weight:600;color:' + urgColor + ';background:' + urgBg + ';padding:4px 10px;border-radius:6px;">' + (daysLeft === null ? 'Heard' : daysLeft + ' court days') + '</div>' +
-          '<div style="font-size:11px;color:var(--ink-3);margin-top:4px;">' + done + '/' + URGENT_CHECKLIST.length + ' items</div>' +
-        '</div>';
-      return li.outerHTML
-    }).join('') +
-    '</div>';
+  urgentMatters.sort(function(a,b) {
+    return new Date(a.urgentDate || 0) - new Date(b.urgentDate || 0);
+  });
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'checklist-card';
+
+  const header = document.createElement('div');
+  header.className = 'checklist-card-header';
+  header.innerHTML = '<div class="checklist-card-title">Urgent matters</div><span class="progress-pill">' + urgentMatters.length + ' matter' + (urgentMatters.length !== 1 ? 's' : '') + '</span>';
+  wrapper.appendChild(header);
+
+  urgentMatters.forEach(function(m) {
+    const thursday = m.urgentDate ? getPrevThursday(new Date(m.urgentDate)) : null;
+    const daysLeft = m.urgentDate ? courtDaysUntil(m.urgentDate) : null;
+    const done = URGENT_CHECKLIST.filter(function(i) { return m.checked && m.checked[i.id]; }).length;
+    const pct = Math.round(done / URGENT_CHECKLIST.length * 100);
+    const attyObj = ATTORNEYS.find(function(a) { return a.email === m.atty; });
+    const attyName = attyObj ? attyObj.name : m.atty;
+    const urgColor = daysLeft === null ? '#78716C' : daysLeft <= 3 ? '#991B1B' : daysLeft <= 7 ? '#92400E' : '#166534';
+    const urgBg    = daysLeft === null ? '#E7E5E4' : daysLeft <= 3 ? '#FEE2E2' : daysLeft <= 7 ? '#FEF3C7' : '#DCFCE7';
+    const daysText = daysLeft === null ? 'Heard' : daysLeft + ' court days';
+    const closesText = thursday ? formatDate(thursday) + ' 12:00' : '-';
+    const hearingText = m.urgentDate ? formatDate(m.urgentDate) : 'Not set';
+
+    const row = document.createElement('div');
+    row.className = 'checklist-item';
+    row.style.cursor = 'pointer';
+    row.dataset.mid = m.id;
+    row.addEventListener('click', function() { openUrgentMatter(this.dataset.mid); });
+
+    const left = document.createElement('div');
+    left.style.flex = '1';
+    left.innerHTML =
+      '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + m.name + '</div>' +
+      '<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">' + m.caseNo + ' . ' + attyName + '</div>' +
+      '<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">Hearing: ' + hearingText + ' . Closes: ' + closesText + '</div>' +
+      '<div style="margin-top:6px;height:4px;background:var(--paper-3);border-radius:2px;width:200px;max-width:100%;">' +
+        '<div style="height:100%;background:' + (pct === 100 ? '#166534' : '#B45309') + ';border-radius:2px;width:' + pct + '%;"></div>' +
+      '</div>';
+
+    const right = document.createElement('div');
+    right.style.cssText = 'text-align:right;flex-shrink:0;';
+    right.innerHTML =
+      '<div style="font-size:13px;font-weight:600;color:' + urgColor + ';background:' + urgBg + ';padding:4px 10px;border-radius:6px;">' + daysText + '</div>' +
+      '<div style="font-size:11px;color:var(--ink-3);margin-top:4px;">' + done + '/' + URGENT_CHECKLIST.length + ' items</div>';
+
+    row.appendChild(left);
+    row.appendChild(right);
+    wrapper.appendChild(row);
+  });
+
+  mainContent.innerHTML = '';
+  mainContent.appendChild(wrapper);
 }
+
 
 function openUrgentMatter(id) {
   const m = matters[id];
