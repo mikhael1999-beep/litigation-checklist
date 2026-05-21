@@ -114,7 +114,22 @@ const CHECKLISTS = {
 const TYPE_LABELS = {
   unopposed: "Unopposed Motion",
   opposed:   "Opposed Motion",
-  default:   "Default Judgment"
+  default:   "Default Judgment",
+  urgent:    "Urgent Matter"
+};
+
+const URGENT_CHECKLIST = [
+  { id: "urg_1", label: "Date confirmed and captured" },
+  { id: "urg_2", label: "Proof of service / return of service filed" },
+  { id: "urg_3", label: "Service affidavit filed" },
+  { id: "urg_4", label: "Draft order uploaded" },
+  { id: "urg_5", label: "Practice note uploaded" },
+  { id: "urg_6", label: "Heads of argument filed" },
+];
+
+const URGENT_DIRECTIVE = {
+  id: "urg_directive",
+  label: "I confirm that I have read and considered the directive issued by the Judge hearing this urgent matter and I am satisfied that all requirements have been met."
 };
 
 const ATTORNEYS = [
@@ -133,6 +148,74 @@ let matters = {};
 let currentMatterId = null;
 let currentPhase = 1;
 let unsubscribe = null;
+
+// ============================================================
+// URGENT MATTER HELPERS
+// ============================================================
+function getPrevThursday(hearingDate) {
+  // Get the Thursday of the week BEFORE the hearing week
+  const d = new Date(hearingDate);
+  // Go back to previous week's Thursday
+  const day = d.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  // Days to subtract to get to Tuesday = hearing day (2)
+  // Then go back to previous Thursday (4)
+  // From Tuesday: go back 5 days to previous Thursday
+  const daysBack = day === 2 ? 5 : day === 3 ? 6 : day === 4 ? 7 : day === 5 ? 8 : day === 6 ? 9 : day === 0 ? 3 : day === 1 ? 4 : 5;
+  const thursday = new Date(d);
+  thursday.setDate(d.getDate() - daysBack);
+  return thursday;
+}
+
+function getMonday(thursdayDate) {
+  // Get Monday of the same week as the Thursday
+  const d = new Date(thursdayDate);
+  const day = d.getDay();
+  const daysBack = day === 1 ? 0 : day === 2 ? 1 : day === 3 ? 2 : day === 4 ? 3 : day === 5 ? 4 : day === 6 ? 5 : 6;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - daysBack);
+  return monday;
+}
+
+function addUrgentCalendarReminders(matterId) {
+  const m = matters[matterId];
+  if (!m || !m.urgentDate) return;
+
+  const thursday = getPrevThursday(new Date(m.urgentDate));
+  const monday   = getMonday(thursday);
+
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+  const toYMD = function(d) {
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  };
+  const to = ATTORNEYS.map(function(a){return a.email;}).join(';');
+
+  // Monday reminder
+  const monSubject = '[URGENT REMINDER] Closes Thursday 12:00 - ' + m.name;
+  const monBody    = 'Reminder: Urgent matter closes this Thursday at 12:00. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Hearing date: ' + formatDate(m.urgentDate) + '. Closing deadline: Thursday ' + formatDate(thursday) + ' at 12:00. All documents must be filed before then.';
+  const monStart   = toYMD(monday) + 'T08:00:00';
+  const monEnd     = toYMD(monday) + 'T08:30:00';
+  const monUrl     = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(monSubject) + '&startdt=' + monStart + '&enddt=' + monEnd + '&body=' + encodeURIComponent(monBody) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+
+  // Thursday reminder
+  const thuSubject = '[URGENT DEADLINE] Closes TODAY at 12:00 - ' + m.name;
+  const thuBody    = 'URGENT MATTER CLOSES TODAY AT 12:00. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Hearing date: ' + formatDate(m.urgentDate) + '. All documents must be filed by 12:00 today.';
+  const thuStart   = toYMD(thursday) + 'T08:00:00';
+  const thuEnd     = toYMD(thursday) + 'T08:30:00';
+  const thuUrl     = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(thuSubject) + '&startdt=' + thuStart + '&enddt=' + thuEnd + '&body=' + encodeURIComponent(thuBody) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+
+  // Hearing date
+  const hearSubject = '[URGENT HEARING] ' + m.name + ' (' + m.caseNo + ')';
+  const hearBody    = 'Urgent court hearing. Matter: ' + m.name + '. Case: ' + m.caseNo + '. Albert Hibbert Attorneys Inc.';
+  const hearStart   = toYMD(new Date(m.urgentDate)) + 'T09:00:00';
+  const hearEnd     = toYMD(new Date(m.urgentDate)) + 'T17:00:00';
+  const hearUrl     = 'https://outlook.office.com/calendar/deeplink/compose?subject=' + encodeURIComponent(hearSubject) + '&startdt=' + hearStart + '&enddt=' + hearEnd + '&body=' + encodeURIComponent(hearBody) + '&to=' + encodeURIComponent(to) + '&path=%2Fcalendar%2Faction%2Fcompose';
+
+  // Open all three with delays
+  window.open(monUrl, '_blank');
+  setTimeout(function(){ window.open(thuUrl, '_blank'); }, 800);
+  setTimeout(function(){ window.open(hearUrl, '_blank'); }, 1600);
+  toast('3 Outlook reminders created - Monday, Thursday close, and hearing date');
+}
 
 // ============================================================
 // FIREBASE LISTENERS
@@ -209,8 +292,19 @@ async function setDateAllocated(matterId, val) {
 // ============================================================
 function openNewMatter() {
   document.getElementById('modal-overlay').classList.remove('hidden');
-  setTimeout(() => document.getElementById('m-name').focus(), 100);
+  setTimeout(function() { document.getElementById('m-name').focus(); }, 100);
 }
+
+window.onMatterTypeChange = function() {
+  const type = document.getElementById('m-type').value;
+  const urgentField = document.getElementById('urgent-date-field');
+  const appliedField = document.getElementById('m-date-applied').closest ? document.getElementById('m-date-applied').parentElement : null;
+  if (type === 'urgent') {
+    urgentField.style.display = 'block';
+  } else {
+    urgentField.style.display = 'none';
+  }
+};
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
@@ -227,14 +321,22 @@ async function createMatter() {
   if (!name || !caseNo) { toast('Please enter matter name and case number', true); return; }
 
   const id = Date.now().toString();
-  const cl = CHECKLISTS[type];
-  const checked = {};
-  [...cl.phase1.items, ...cl.phase2.items].forEach(i => checked[i.id] = false);
+  const urgentDate = document.getElementById('m-urgent-date').value;
+  let checked = {};
+
+  if (type === 'urgent') {
+    URGENT_CHECKLIST.forEach(i => { checked[i.id] = false; });
+    checked[URGENT_DIRECTIVE.id] = false;
+  } else {
+    const cl = CHECKLISTS[type];
+    [...cl.phase1.items, ...cl.phase2.items].forEach(i => { checked[i.id] = false; });
+  }
 
   const matter = {
     id, name, caseNo, type, atty, ghost,
-    dateApplied: applied || null,
+    dateApplied: type !== 'urgent' ? (applied || null) : null,
     dateAllocated: null,
+    urgentDate: type === 'urgent' ? (urgentDate || null) : null,
     created: new Date().toISOString(),
     checked,
   };
@@ -324,7 +426,8 @@ function addAllToCalendar(matterId) {
 // ============================================================
 function updateStats() {
   const all = Object.values(matters);
-  const active = all.filter(m => m.status !== 'concluded');
+  const active  = all.filter(m => m.status !== 'concluded' && m.type !== 'urgent');
+  const urgentActive = all.filter(m => m.status !== 'concluded' && m.type === 'urgent');
   document.getElementById('stat-total').textContent = active.length;
   document.getElementById('stat-p1').textContent = active.filter(m => !m.dateAllocated).length;
   document.getElementById('stat-p2').textContent = active.filter(m => m.dateAllocated).length;
@@ -332,6 +435,12 @@ function updateStats() {
   const el = document.getElementById('stat-fu');
   el.textContent = fu;
   el.style.color = fu > 0 ? '#FCA5A5' : '#86EFAC';
+  // Update urgent badge
+  const badge = document.getElementById('urgent-count-badge');
+  if (badge) {
+    badge.textContent = urgentActive.length;
+    badge.style.display = urgentActive.length > 0 ? 'inline-block' : 'none';
+  }
 }
 
 function renderSidebar() {
@@ -389,6 +498,108 @@ function openMatter(id) {
   document.getElementById('page-title').textContent = m.name;
   document.getElementById('page-sub').textContent = TYPE_LABELS[m.type] + ' . ' + m.caseNo;
   renderMatter(m);
+}
+
+function showUrgentMatters() {
+  currentMatterId = null;
+  document.querySelectorAll('.matter-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.sidebar-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('urgent-sidebar-btn').classList.add('active');
+  document.getElementById('page-title').textContent = 'Urgent Matters';
+  document.getElementById('page-sub').textContent = 'Urgent applications and closing deadlines';
+  renderUrgentMatters();
+}
+
+function renderUrgentMatters() {
+  const urgentMatters = Object.values(matters).filter(m => m.type === 'urgent' && m.status !== 'concluded');
+  const mainContent = document.getElementById('main-content');
+
+  if (!urgentMatters.length) {
+    mainContent.innerHTML = '<div class="empty-state"><div class="empty-icon" style="font-size:32px;color:#991B1B;">!</div><div class="empty-title">No urgent matters</div><div class="empty-sub">Create an urgent matter using the + New matter button.</div><button class="btn btn-primary" onclick="openNewMatter()">+ New urgent matter</button></div>';
+    return;
+  }
+
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+
+  mainContent.innerHTML = urgentMatters.sort(function(a,b) {
+    return new Date(a.urgentDate || 0) - new Date(b.urgentDate || 0);
+  }).map(function(m) {
+    const thursday   = m.urgentDate ? getPrevThursday(new Date(m.urgentDate)) : null;
+    const monday     = thursday ? getMonday(thursday) : null;
+    const daysUntilHearing = m.urgentDate ? courtDaysUntil(m.urgentDate) : null;
+    const done = URGENT_CHECKLIST.filter(i => m.checked && m.checked[i.id]).length;
+    const directiveDone = m.checked && m.checked[URGENT_DIRECTIVE.id];
+    const attyName = ATTORNEYS.find(function(a){return a.email===m.atty;}) ? ATTORNEYS.find(function(a){return a.email===m.atty;}).name : m.atty;
+
+    const urgencyColor = daysUntilHearing === null ? '#78716C' : daysUntilHearing <= 3 ? '#991B1B' : daysUntilHearing <= 7 ? '#92400E' : '#166534';
+    const urgencyBg    = daysUntilHearing === null ? '#E7E5E4' : daysUntilHearing <= 3 ? '#FEE2E2' : daysUntilHearing <= 7 ? '#FEF3C7' : '#DCFCE7';
+
+    const checklistItems = URGENT_CHECKLIST.map(function(item) {
+      const checked = m.checked && m.checked[item.id];
+      return '<div class="checklist-item ' + (checked?'completed':'') + '">' +
+        '<div class="check-box ' + (checked?'checked':'') + '" onclick="toggleCheck('' + m.id + '','' + item.id + '')">' +
+        (checked ? '<span class="check-mark">[check]</span>' : '') +
+        '</div>' +
+        '<div class="item-label ' + (checked?'done':'') + '">' + item.label + '</div>' +
+        '</div>';
+    }).join('');
+
+    const directiveItem = '<div class="checklist-item" style="background:' + (directiveDone?'#DCFCE7':'#FEF3C7') + ';border-left:3px solid ' + (directiveDone?'#166534':'#B45309') + ';">' +
+      '<div class="check-box ' + (directiveDone?'checked':'') + '" style="border-color:' + (directiveDone?'#166534':'#B45309') + ';" onclick="toggleCheck('' + m.id + '','' + URGENT_DIRECTIVE.id + '')">' +
+      (directiveDone ? '<span class="check-mark">[check]</span>' : '') +
+      '</div>' +
+      '<div><div class="item-label ' + (directiveDone?'done':'') + '" style="font-weight:500;">' + URGENT_DIRECTIVE.label + '</div></div>' +
+      '</div>';
+
+    const completedBanner = m.urgentCompletedBy ? '<div style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:8px;padding:0.75rem 1.5rem;margin-top:1rem;font-size:13px;font-weight:500;color:#166534;">Enrolment completed by ' + m.urgentCompletedBy + ' on ' + formatDate(m.urgentCompletedDate) + '</div>' : '';
+
+    return '<div class="checklist-card" style="margin-bottom:1.5rem;">' +
+      '<div class="checklist-card-header" style="background:var(--paper-2);">' +
+        '<div style="flex:1;">' +
+          '<div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#991B1B;margin-bottom:3px;">Urgent Matter</div>' +
+          '<div style="font-size:15px;font-weight:600;color:var(--ink);">' + m.name + '</div>' +
+          '<div style="font-size:12px;color:var(--ink-3);margin-top:2px;">' + m.caseNo + ' . ' + attyName + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;flex-shrink:0;">' +
+          '<div style="font-size:13px;font-weight:600;color:' + urgencyColor + ';background:' + urgencyBg + ';padding:4px 10px;border-radius:6px;">' +
+            (daysUntilHearing === null ? 'Heard' : daysUntilHearing + ' court days') +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--border);">' +
+        '<div style="padding:10px 1.5rem;border-right:1px solid var(--border);">' +
+          '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Hearing date</div>' +
+          '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + (m.urgentDate ? formatDate(m.urgentDate) : 'Not set') + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 1.5rem;border-right:1px solid var(--border);">' +
+          '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Closes Thursday</div>' +
+          '<div style="font-size:13px;font-weight:500;color:#991B1B;">' + (thursday ? formatDate(thursday) + ' at 12:00' : '-') + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 1.5rem;">' +
+          '<div style="font-size:10px;color:var(--ink-4);margin-bottom:3px;text-transform:uppercase;font-weight:600;">Progress</div>' +
+          '<div style="font-size:13px;font-weight:500;color:var(--ink);">' + done + '/' + URGENT_CHECKLIST.length + ' items' + (directiveDone?' + directive':' - directive pending') + '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="outlook-btn" style="background:#1E3A5F;" onclick="addUrgentCalendarReminders('' + m.id + '')">Cal Add all reminders to Outlook</button>' +
+        '<button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;margin-left:auto;" onclick="concludeMatter('' + m.id + '')">Conclude</button>' +
+        '<button class="btn btn-sm" style="color:#999;border-color:#e0e0e0;font-size:11px;" onclick="deleteMatter('' + m.id + '')">Delete</button>' +
+      '</div>' +
+
+      checklistItems +
+      directiveItem +
+
+      (!m.urgentCompletedBy ? '<div style="padding:12px 1.5rem;border-top:1px solid var(--border);background:var(--paper-2);">' +
+        '<button class="btn btn-sm" style="background:#166534;color:white;border-color:#166534;width:100%;justify-content:center;" onclick="completeUrgentMatter('' + m.id + '')">' +
+        'Mark urgent matter enrolment complete' +
+        '</button>' +
+        '</div>' : '') +
+
+      completedBanner +
+      '</div>';
+  }).join('');
 }
 
 function showDashboard() {
@@ -560,14 +771,14 @@ function renderMatter(m) {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="deadline-date">${formatDate(dd)}</span>
           <span class="deadline-days ${cls}">${left === null ? 'Past' : left + ' court days'}</span>
-          <button class="outlook-btn" onclick="addToCalendar('${m.id}','${d.label}','${dd.toISOString()}')">[Cal] Outlook</button>
+          <button class="outlook-btn" onclick="addToCalendar('${m.id}','${d.label}','${dd.toISOString()}')">Cal Outlook</button>
         </div>
       </div>`;
     }).join('');
     deadlinesHtml = `
       <div class="deadline-card">
         <div class="deadline-header">[Timer] &nbsp;Calculated deadlines from ${formatDate(m.dateAllocated)}
-          <button class="btn btn-sm btn-gold" onclick="addAllToCalendar('${m.id}')" style="margin-left:auto;">[Cal] Add all to Outlook</button>
+          <button class="btn btn-sm btn-gold" onclick="addAllToCalendar('${m.id}')" style="margin-left:auto;">Cal Add all to Outlook</button>
         </div>
         ${dls}
       </div>`;
@@ -618,13 +829,13 @@ function renderMatter(m) {
 
     ${!m.dateApplied ? `
     <div class="date-input-row">
-      <span class="date-input-label">[Cal] Record date application submitted:</span>
+      <span class="date-input-label">Cal Record date application submitted:</span>
       <input type="date" class="date-input" onchange="setDateApplied('${m.id}',this.value)" value="" />
     </div>` : `
     <div class="date-input-row" style="background:#EFF6FF;border-color:#BFDBFE;">
-      <span class="date-input-label" style="color:#1E3A5F;">[Cal] Date applied: ${formatDate(m.dateApplied)}</span>
+      <span class="date-input-label" style="color:#1E3A5F;">Cal Date applied: ${formatDate(m.dateApplied)}</span>
       <button class="outlook-btn" style="background:#1E3A5F;" onclick="addFollowUpReminder('${m.id}')">
-        [Cal] Set 14-day follow-up in Outlook
+        Cal Set 14-day follow-up in Outlook
       </button>
       <input type="date" class="date-input" style="margin-left:auto;" onchange="setDateApplied('${m.id}',this.value)" value="${m.dateApplied||''}" title="Change date applied" />
     </div>`}
@@ -714,6 +925,26 @@ window.setDateAllocated = setDateAllocated;
 window.switchPhase    = switchPhase;
 window.addToCalendar  = addToCalendar;
 window.addAllToCalendar = addAllToCalendar;
+window.addUrgentCalendarReminders = addUrgentCalendarReminders;
+window.showUrgentMatters = showUrgentMatters;
+
+window.completeUrgentMatter = async function(matterId) {
+  const names = ATTORNEYS.map(function(a){return a.name;});
+  const nameList = names.map(function(n,i){return (i+1)+'. '+n;}).join(' | ');
+  const input = prompt('Select your name (enter number): ' + nameList);
+  if (!input) return;
+  const idx = parseInt(input) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= names.length) { toast('Invalid selection', true); return; }
+  const personName = names[idx];
+  try {
+    await updateDoc(doc(db, 'matters', matterId), {
+      urgentCompletedBy: personName,
+      urgentCompletedDate: new Date().toISOString()
+    });
+    toast('Urgent matter marked complete by ' + personName);
+    renderUrgentMatters();
+  } catch(e) { toast('Error: ' + e.message, true); }
+};
 window.addFollowUpReminder = function(matterId) {
   const m = matters[matterId];
   if (!m || !m.dateApplied) return;
@@ -954,6 +1185,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper-2);color:var(--ink)
   </div>
   <div class="sidebar-section">Dashboard</div>
   <button class="sidebar-btn active" onclick="showDashboard()">  &nbsp;Overview</button>
+  <button class="sidebar-btn" id="urgent-sidebar-btn" onclick="showUrgentMatters()" style="color:rgba(255,150,150,0.9);">* Urgent Matters <span id="urgent-count-badge" style="margin-left:auto;background:rgba(153,27,27,0.4);color:#FCA5A5;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;display:none;">0</span></button>
   <div class="sidebar-section">Active matters</div>
   <div id="matter-list"><div style="padding:0.75rem 1.5rem;font-size:12px;color:rgba(255,255,255,0.25);">Connecting...</div></div>
   <div class="sidebar-footer">Gauteng Division . Directive 1/2024</div>
@@ -990,10 +1222,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper-2);color:var(--ink)
         </div>
         <div class="form-field">
           <label class="form-label">Matter type *</label>
-          <select class="form-select" id="m-type">
+          <select class="form-select" id="m-type" onchange="onMatterTypeChange()">
             <option value="unopposed">Unopposed Motion</option>
             <option value="opposed">Opposed Motion</option>
             <option value="default">Default Judgment</option>
+            <option value="urgent">Urgent Matter</option>
           </select>
         </div>
       </div>
@@ -1017,6 +1250,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper-2);color:var(--ink)
       <div class="form-field">
         <label class="form-label">Date application submitted</label>
         <input class="form-input" type="date" id="m-date-applied" />
+      </div>
+      <div class="form-field" id="urgent-date-field" style="display:none;">
+        <label class="form-label">Urgent hearing date (Tuesday) *</label>
+        <input class="form-input" type="date" id="m-urgent-date" />
+        <div style="font-size:11px;color:var(--ink-3);margin-top:4px;">Select the Tuesday the matter is set down. System will calculate Thursday closing deadline automatically.</div>
       </div>
     </div>
     <div class="modal-footer">
