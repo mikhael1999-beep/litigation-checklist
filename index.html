@@ -849,7 +849,7 @@ const LS = { get: (k, d) => { try { const v = localStorage.getItem(k); return v 
 const S = {
   matters: {}, ready: false, error: null,
   view: 'agenda', matterId: null, tab: 'checklist', phase: null,
-  me: LS.get('aha.me', ''), scope: LS.get('aha.scope', 'mine'),
+  me: LS.get('aha.me', ''), scope: LS.get('aha.scope', 'all'),
   q: '', f: { type: '', atty: '', stage: '' }, sort: 'due',
   calYM: ymd(today()).slice(0, 7), agendaFilter: '',
   editingId: null, formType: 'unopposed',
@@ -913,6 +913,9 @@ function deadlinesFor(m) {
   Object.entries(m.tasks || {}).forEach(([tid, t]) => {
     if (t && t.due) add({ id: 'task_' + tid, taskId: tid, d: t.due, label: t.title, kind: 'task', done: t.status === 'done', owner: t.owner, waiting: t.status === 'waiting' ? (t.waitingOn || 'someone') : '' });
   });
+  // Once the hearing date has passed, the pre-hearing deadlines are moot.
+  const hd = isUrgent(m) ? m.urgentDate : m.dateAllocated;
+  if (hd && D(hd) < today()) out.forEach(x => { if (x.kind === 'close' || x.kind === 'enrol' || x.kind === 'follow') x.done = true; });
   return out.sort((a, b) => a.d - b.d);
 }
 const isOpen = (x) => !x.done && !(x.kind === 'hearing' && x.d < today());
